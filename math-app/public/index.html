@@ -75,6 +75,11 @@
   .wq { line-height:1.6; }
   .wa { margin-top:4px; color:var(--muted); font-size:14px; }
 
+  .mind-wrap { background: var(--card); border:1px solid var(--line); border-radius:12px; padding: 8px; margin: 8px 0 14px; overflow-x:auto; }
+  .mind-wrap svg { max-width:100%; height:auto; display:block; margin:0 auto; }
+  .mind-toggle { display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--brand); font-size:14px; user-select:none; margin: 4px 0 8px; }
+  .mind-toggle::before { content:'▶'; transition: transform .2s; display:inline-block; }
+  .mind-toggle.open::before { transform: rotate(90deg); }
   footer { text-align:center; color:var(--muted); font-size:12px; padding: 12px; }
 </style>
 </head>
@@ -85,6 +90,16 @@
 </header>
 <main id="app"></main>
 <footer>Powered by Cloudflare Workers · math.idai.asia</footer>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'default',
+    mindmap: { padding: 10, useMaxWidth: true },
+    securityLevel: 'loose',
+  });
+  window.mermaid = mermaid;
+</script>
 <script src="/app.js"></script>
 </body>
 </html>

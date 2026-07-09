@@ -467,6 +467,11 @@ function renderChapter() {
       <div class="stars big">${starHtml(rec.stars)} ${rec.best?`（历史最高 ${rec.best} 分）`:''}</div>
     </div>
     <div class="panel">
+      <h3 style="margin-top:0">🧠 思维导图</h3>
+      <div class="mind-toggle open" id="mind-toggle">收起/展开</div>
+      <div class="mind-wrap" id="mind-wrap"><p style="color:var(--muted);padding:8px">加载中…</p></div>
+    </div>
+    <div class="panel">
       <h3 style="margin-top:0">📘 知识点</h3>
       ${ch.lessons.map(l => `<div class="lesson"><h4>${l.h}</h4><p>${l.body}</p></div>`).join('')}
     </div>
@@ -489,6 +494,19 @@ function renderChapter() {
   document.getElementById('stage').onclick = () => nav('stage-select');
   const wb = document.getElementById('wrong');
   if (wb) wb.onclick = () => nav('wrongbook');
+  // 渲染思维导图
+  const mmWrap = document.getElementById('mind-wrap');
+  const mmToggle = document.getElementById('mind-toggle');
+  if (mmWrap && MINDMAPS[ch.id]) {
+    renderMindmap(mmWrap, MINDMAPS[ch.id]);
+    if (mmToggle) mmToggle.onclick = () => {
+      const open = mmToggle.classList.toggle('open');
+      mmWrap.style.display = open ? '' : 'none';
+    };
+  } else if (mmWrap) {
+    mmWrap.style.display = 'none';
+    if (mmToggle) mmToggle.style.display = 'none';
+  }
 }
 
 function renderStageSelect() {
@@ -691,3 +709,307 @@ function render() {
   (m[state.view] || renderHome)();
 }
 render();
+// ============ 思维导图（Mermaid mindmap） ============
+const MINDMAPS = {
+  time: `mindmap
+  root((时·分·秒))
+    单位换算
+      1时=60分
+      1分=60秒
+      1时=3600秒
+    24时计时法
+      下午+12
+      13:00=下午1点
+      0:00=夜里12点
+    经过时间
+      结束-开始
+      跨小时先到整点
+      再补足分钟
+    生活参考
+      眨眼≈1秒
+      一节课40分
+      一集动画约20分`,
+  addsub: `mindmap
+  root((万以内加减))
+    竖式规则
+      数位对齐
+      从个位算起
+    进位
+      满10进1
+      本位留个位
+    退位
+      不够减向前借1当10
+    验算
+      加法::交换加数
+      加法::和减加数
+      减法::差加减数=被减数`,
+  measure_len: `mindmap
+  root((长度单位))
+    单位大小
+      千米km
+      米m
+      分米dm
+      厘米cm
+      毫米mm
+    进率
+      1km=1000m
+      1m=10dm=100cm=1000mm
+      1cm=10mm
+    换算方向
+      大→小:×进率
+      小→大:÷进率
+    生活参考
+      指甲盖≈1cm
+      书厚≈8mm
+      楼层高≈3m
+      操场一圈≈400m`,
+  measure_mass: `mindmap
+  root((质量单位))
+    单位大小
+      吨t
+      千克kg
+      克g
+    进率
+      1吨=1000kg
+      1kg=1000g
+    单位选择
+      轻→克
+      能抱起→千克
+      很重→吨
+    参考物
+      硬币≈6克
+      盐袋500克
+      大米25千克
+      小汽车约1吨`,
+  multi1: `mindmap
+  root((多位数×一位数))
+    竖式
+      从个位起
+      逐位相乘
+      满几十进几
+    0的规律
+      0×任何数=0
+      末尾有0::先算不带0再补0
+    估算
+      看成整十整百
+    例题
+      237×4=948
+      4×7=28::写8进2
+      4×3+2=14::写4进1
+      4×2+1=9`,
+  div1: `mindmap
+  root((有余数的除法))
+    核心
+      余数<除数
+    验算
+      商×除数+余数=被除数
+    例题
+      23÷4=5余3
+      4×5=20
+      23-20=3<4✓
+    生活应用
+      够不够坐
+      够不够分
+      有时向上取整`,
+  frac: `mindmap
+  root((分数初步))
+    含义
+      平均分成若干份
+      取1份=几分之一
+    读写
+      2/5=五分之二
+      分母::分几份
+      分子::取几份
+    加减
+      同分母
+      分母不变
+      分子相加或相减
+    比较
+      同分母::分子大者大
+      同分子::分母小者大
+    特殊
+      d/d=1
+      0/d=0`,
+  position: `mindmap
+  root((位置与方向))
+    地图默认
+      上北
+      下南
+      左西
+      右东
+    相反方向
+      东↔西
+      南↔北
+    太阳
+      东升西落
+    面朝太阳
+      前东后西
+      左北右南`,
+  div2: `mindmap
+  root((一位数除法))
+    竖式步骤
+      从最高位试商
+      商×除数写下面
+      相减得余数
+      落下一位继续
+    商中间0
+      本步除数比被除数小
+      商写0
+      再落下一位
+    验算
+      无余::商×除数=被除数
+      有余::+余数
+    估算
+      看首位与除数关系`,
+  stat: `mindmap
+  root((数据统计))
+    流程
+      收集
+      整理
+      制表/画图
+      分析
+    平均数
+      平均=总数÷项数
+      反映整体水平
+    读图
+      看坐标含义
+      比较大小
+      回答问题`,
+  ymd: `mindmap
+  root((年·月·日))
+    大月31天
+      1月
+      3月
+      5月
+      7月
+      8月
+      10月
+      12月
+    小月30天
+      4月
+      6月
+      9月
+      11月
+    2月特殊
+      平年28
+      闰年29
+    平年闰年
+      能被4整除::一般是闰年
+      能被100整除::必须能被400整除
+      2024闰年
+      2100平年
+    24时计时法
+      下午+12
+      晚上8点半=20:30`,
+  multi2: `mindmap
+  root((两位数×两位数))
+    竖式三步
+      个位数乘::第一层
+      十位数乘::左移一位
+      两层相加
+    整十整百
+      去0算再补0
+      30×40=1200
+    估算
+      19×21≈400
+    例题
+      23×14
+      23×4=92
+      23×10=230
+      92+230=322`,
+  area: `mindmap
+  root((面积))
+    长方形
+      面积=长×宽
+      周长=(长+宽)×2
+    正方形
+      面积=边长×边长
+      周长=边长×4
+    面积单位
+      平方厘米cm²
+      平方分米dm²
+      平方米m²
+      公顷ha
+      平方千米km²
+    进率
+      1m²=100dm²=10000cm²
+      1公顷=10000m²
+      1km²=100公顷
+    易错
+      周长用长度单位
+      面积用面积单位`,
+  decimal: `mindmap
+  root((小数初步))
+    含义
+      平均分10份::0.1
+      平均分100份::0.01
+    读写
+      0.5=零点五
+      整数部分
+      小数部分
+    元角分
+      1元=10角=100分
+      3.5元=3元5角
+      2.05元=2元0角5分
+    比较
+      先比整数部分
+      再逐位比
+    加减
+      小数点对齐
+      按整数算
+      结果点小数点`,
+  mixed: `mindmap
+  root((四则混合))
+    运算顺序
+      括号内
+      乘除
+      加减
+      同级从左到右
+    乘法分配律
+      a×(b+c)=a×b+a×c
+      25×(4+8)=300
+    例题
+      20+3×4=32
+      (20+3)×4=92`,
+  word: `mindmap
+  root((解决问题))
+    读题四步
+      圈已知
+      画问题
+      想数量关系
+      列式检查单位
+    单价×数量=总价
+      3元×4支=12元
+    速度×时间=路程
+      60×3=180千米
+    单产量×数量=总产量
+      80×5=400个
+    平均分
+      总÷份数=每份
+      总÷每份=份数`,
+  pattern: `mindmap
+  root((找规律))
+    常见类型
+      等差::每次加相同数
+      等比::每次乘相同数
+      差的变化
+      平方数
+    例题
+      2,4,8,16,?→32
+      1,3,6,10,15,?→21
+      1,4,9,16,?→25
+    图形规律
+      找周期
+      重复出现`,
+};
+
+async function renderMindmap(container, code) {
+  if (!window.mermaid || !code) { container.style.display='none'; return; }
+  try {
+    const id = 'mm-' + Math.random().toString(36).slice(2, 8);
+    const { svg } = await window.mermaid.render(id, code);
+    container.innerHTML = svg;
+  } catch (e) {
+    container.innerHTML = '<p style="color:var(--muted);padding:8px">思维导图渲染失败：' + (e.message||e) + '</p>';
+  }
+}
