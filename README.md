@@ -1,4 +1,10 @@
-﻿# Cloudflare 运维工具箱
+# Cloudflare 运维工具箱
+
+[![CI](https://github.com/hgxlw6/cloudflare-toolbox/actions/workflows/ci.yml/badge.svg)](https://github.com/hgxlw6/cloudflare-toolbox/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers%20%2B%20AI-orange?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/workers/)
+
 
 基于 Cloudflare REST API v4 的通用 Python 工具（标准库 zero-deps），可长期复用。
 

@@ -1,0 +1,42 @@
+﻿name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint & Sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install runtime deps
+        run: pip install cryptography
+
+      - name: Compile all Python scripts
+        run: python -m compileall -q scripts
+
+      - name: Import smoke test (cf_client)
+        run: |
+          python -c "import sys; sys.path.insert(0, 'scripts'); import cf_client; print('cf_client ok, API_BASE=', cf_client.API_BASE)"
+
+      - name: Guard against committed secrets
+        run: |
+          set -e
+          if git ls-files | grep -E '(^|/)(\.env$|certs/|.*\.pem$)' ; then
+            echo "::error::Sensitive files were committed!"
+            exit 1
+          fi
+          if git grep -nE 'cfut_[A-Za-z0-9]{20,}|CLOUDFLARE_API_TOKEN=cfut_' -- ':!.env.example' ':!README.md' ':!.github/**' ; then
+            echo "::error::Possible token leak detected in tracked files"
+            exit 1
+          fi
+          echo "no secrets found in tracked files"
