@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>三年级英语上册 · 学习+闯关</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🔤</text></svg>" />
+<style>
+  :root { color-scheme: light dark; --brand:#22c55e; --star:#f59e0b; --ok:#22c55e; --bad:#ef4444; --bg:#f4faf6; --card:#fff; --line:rgba(0,0,0,.08); --text:#1a1e2b; --muted:#6b7280; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f1420; --card:#171c2b; --line:rgba(255,255,255,.08); --text:#e8ecf5; --muted:#9aa3b2; } }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { font-family: system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  header { padding: 22px 16px 6px; text-align:center; }
+  header h1 { margin:0 0 4px; font-size:22px; }
+  header p { margin:0; color:var(--muted); font-size:13px; }
+  main { max-width: 900px; margin: 0 auto; padding: 8px 16px 60px; }
+
+  .summary { display:flex; gap:8px; align-items:center; padding: 10px 4px; flex-wrap:wrap; }
+  .s-item { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 14px; min-width:82px; text-align:center; }
+  .s-num { font-size:22px; font-weight:700; color:var(--brand); line-height:1.2; }
+  .s-lbl { font-size:11px; color:var(--muted); margin-top:2px; }
+  .ghost.sm { padding:6px 12px; font-size:12px; margin-left:auto; }
+
+  .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(240px,1fr)); gap:14px; margin-top:8px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,.04); cursor:pointer; transition:transform .1s ease; }
+  .card:hover { transform: translateY(-2px); }
+  .card h3 { margin:0 0 6px; font-size:16px; }
+  .card p { margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; background:rgba(34,197,94,.15); color:var(--brand); margin-bottom:6px; }
+  .stars { margin-top:10px; font-size:16px; color:var(--star); letter-spacing:2px; }
+  .stars.big { font-size:22px; }
+  .wrong-dot { display:inline-block; margin-left:6px; color:var(--bad); font-size:12px; }
+
+  .back { display:inline-flex; align-items:center; gap:6px; color:var(--brand); text-decoration:none; margin-bottom:10px; cursor:pointer; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:16px; padding: 16px 18px; margin-bottom:14px; }
+  .panel h2, .panel h3 { margin: 0 0 10px; }
+
+  .voice-bar { display:flex; gap:6px; align-items:center; margin-bottom:8px; flex-wrap:wrap; font-size:13px; color:var(--muted); }
+  .voice-bar select { padding:4px 8px; border:1px solid var(--line); background:transparent; color:inherit; border-radius:8px; font-size:13px; }
+  .rate-slider { width:100px; }
+
+  .word-grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap:10px; }
+  .word { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; cursor:pointer; user-select:none; transition: background .15s; position:relative; }
+  .word:hover { border-color:var(--brand); background: rgba(34,197,94,.05); }
+  .word:active { transform: scale(.98); }
+  .word .en { font-size:22px; font-weight:600; }
+  .word .ipa { color:var(--muted); font-family: "Charis SIL","Doulos SIL","Lucida Sans Unicode",serif; font-size:14px; margin-top:2px; }
+  .word .cn { color:var(--muted); font-size:14px; margin-top:2px; }
+  .word .speaker { position:absolute; top:8px; right:10px; font-size:16px; opacity:.6; }
+
+  .sent-list { display:flex; flex-direction:column; gap:10px; }
+  .sent { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 14px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+  .sent:hover { border-color:var(--brand); }
+  .sent .en { font-size:17px; }
+  .sent .cn { color:var(--muted); font-size:13px; margin-top:2px; }
+  .sent .spk { font-size:18px; }
+
+  .mind-wrap { background: var(--card); border:1px solid var(--line); border-radius:12px; padding: 8px; margin: 8px 0 14px; overflow-x:auto; }
+  .mind-wrap svg { max-width:100%; height:auto; display:block; margin:0 auto; }
+  .mind-toggle { display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--brand); font-size:14px; user-select:none; margin: 4px 0 8px; }
+  .mind-toggle::before { content:'▶'; transition: transform .2s; display:inline-block; }
+  .mind-toggle.open::before { transform: rotate(90deg); }
+
+  .stage-card { cursor:pointer; }
+  .stage-card:hover { transform: translateY(-1px); }
+  .stage-card.locked { opacity:.5; cursor:not-allowed; }
+
+  .quiz-head { display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; font-size:14px; color:var(--muted); }
+  .q { font-size: 22px; margin: 10px 0 14px; line-height:1.5; word-break: break-word; text-align:center; }
+  .q .big-en { font-size: 34px; font-weight:600; color:var(--brand); }
+  .q .ipa { color:var(--muted); font-family: "Charis SIL","Doulos SIL","Lucida Sans Unicode",serif; font-size:16px; }
+  .q .play-btn { display:inline-block; margin-left:8px; cursor:pointer; font-size:24px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; }
+  input[type=text] { padding: 12px 14px; font-size:20px; border:1px solid var(--line); background:transparent; color:inherit; border-radius:10px; width: 260px; text-align:center; }
+  input:focus { outline:none; border-color:var(--brand); }
+  button.primary { padding: 12px 20px; font-size:16px; border:none; background:var(--brand); color:#fff; border-radius:10px; cursor:pointer; }
+  button.ghost { padding: 12px 20px; font-size:16px; background:transparent; color:inherit; border:1px solid var(--line); border-radius:10px; cursor:pointer; }
+  .feedback { margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size:15px; }
+  .feedback.ok { background: rgba(34,197,94,.12); color: var(--ok); }
+  .feedback.bad { background: rgba(239,68,68,.12); color: var(--bad); }
+  .options { display:grid; grid-template-columns: repeat(2,1fr); gap:8px; }
+  .options button { padding: 14px; font-size:17px; border:1px solid var(--line); background:var(--card); color:inherit; border-radius:10px; cursor:pointer; }
+  .options button.ok { border-color: var(--ok); background: rgba(34,197,94,.12); }
+  .options button.bad { border-color: var(--bad); background: rgba(239,68,68,.12); }
+  .hint { color:var(--muted); font-size:13px; margin:6px 0 0; text-align:center; }
+  .progress { height: 6px; background: var(--line); border-radius: 999px; overflow:hidden; margin: 6px 0 12px; }
+  .progress > i { display:block; height:100%; background: var(--brand); width: 0%; transition: width .2s ease; }
+  .wrong-item { padding:10px 0; border-bottom:1px dashed var(--line); }
+  .wrong-item:last-child { border:none; }
+  footer { text-align:center; color:var(--muted); font-size:12px; padding: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔤 三年级英语上册 · 学习 + 闯关</h1>
+  <p>点单词自动发音；每单元 6 关闯关，累计星星，错词自动记录</p>
+</header>
+<main id="app"></main>
+<footer>Powered by Cloudflare Workers · en.idai.asia</footer>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'default',
+    mindmap: { padding: 10, useMaxWidth: true },
+    securityLevel: 'loose',
+  });
+  window.mermaid = mermaid;
+</script>
+<script src="/app.js"></script>
+</body>
+</html>
