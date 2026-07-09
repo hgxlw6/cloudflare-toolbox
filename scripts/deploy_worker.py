@@ -79,6 +79,7 @@ def upload_assets(cf: CloudflareClient, account_id: str, script_name: str, asset
         return None
 
     manifest = {p: {"hash": info["hash"], "size": len(info["data"])} for p, info in files.items()}
+    by_hash = {info["hash"]: info for info in files.values()}
     print(f"[assets] 声明清单 {len(manifest)} 个文件…")
 
     resp = cf.post(
@@ -93,30 +94,41 @@ def upload_assets(cf: CloudflareClient, account_id: str, script_name: str, asset
         print("[assets] 服务端表示无需上传（内容未变）")
         return jwt
 
-    # 上传每个 bucket
-    import base64
+    # 上传每个 bucket（multipart/form-data，每个文件 base64 编码）
+    import base64, secrets
     for bucket in buckets:
-        payload_files = []
+        boundary = "----cfAssets" + secrets.token_hex(8)
+        parts = []
         for path_key in bucket:
-            info = files[path_key]
-            payload_files.append({
-                "base64": True,
-                "key": info["hash"],
-                "metadata": {"contentType": info["content_type"]},
-                "value": base64.b64encode(info["data"]).decode("ascii"),
-            })
-        body = json.dumps(payload_files).encode("utf-8")
+            info = by_hash.get(path_key) or files.get(path_key)
+            if info is None:
+                continue
+            b64 = base64.b64encode(info["data"]).decode("ascii")
+            parts.append(f"--{boundary}\r\n".encode())
+            parts.append(
+                (f'Content-Disposition: form-data; name="{info["hash"]}"; filename="{info["hash"]}"\r\n'
+                 f'Content-Type: {info["content_type"]}\r\n'
+                 f'\r\n').encode()
+            )
+            parts.append(b64.encode("ascii"))
+            parts.append(b"\r\n")
+        parts.append(f"--{boundary}--\r\n".encode())
+        body = b"".join(parts)
         req = urllib.request.Request(
             f"{API_BASE}/accounts/{account_id}/workers/assets/upload?base64=true",
             data=body,
             method="POST",
             headers={
                 "Authorization": f"Bearer {jwt}",
-                "Content-Type": "application/json",
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
             },
         )
-        with urllib.request.urlopen(req, timeout=60) as r:
-            payload = json.loads(r.read().decode("utf-8"))
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                payload = json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            raw = e.read().decode("utf-8", errors="replace")
+            raise SystemExit(f"[assets] upload HTTP {e.code}: {raw}")
         new_jwt = (payload.get("result") or {}).get("jwt")
         if new_jwt:
             jwt = new_jwt
