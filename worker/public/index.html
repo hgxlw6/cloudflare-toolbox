@@ -1,0 +1,114 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>idai.asia · AI 助手</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+         background: linear-gradient(135deg,#f5f7fb,#eef1f7); min-height: 100vh; }
+  @media (prefers-color-scheme: dark) {
+    body { background: linear-gradient(135deg,#0f1420,#1a2030); color: #e8ecf5; }
+    .card { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+    .msg.bot { background: rgba(255,255,255,0.06); }
+    .msg.user { background: #2b6cff; color: #fff; }
+    input, button { background: rgba(255,255,255,0.06); color: inherit; border-color: rgba(255,255,255,0.1); }
+    a { color: #7aa8ff; }
+  }
+  header { text-align: center; padding: 32px 16px 12px; }
+  header h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: 0.5px; }
+  header p { margin: 0; opacity: .7; font-size: 13px; }
+  main { max-width: 760px; margin: 0 auto; padding: 16px; }
+  .card { border: 1px solid rgba(0,0,0,0.06); background: #fff; border-radius: 14px;
+          box-shadow: 0 6px 24px rgba(0,0,0,0.06); overflow: hidden; }
+  #log { padding: 18px; height: 62vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 82%; padding: 10px 14px; border-radius: 14px; line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.user { align-self: flex-end; background: #2b6cff; color: #fff; border-bottom-right-radius: 4px; }
+  .msg.bot  { align-self: flex-start; background: #f1f3f8; border-bottom-left-radius: 4px; }
+  .msg.sys  { align-self: center; font-size: 12px; opacity: .6; }
+  form { display: flex; gap: 8px; padding: 10px; border-top: 1px solid rgba(0,0,0,0.06); }
+  input { flex: 1; padding: 12px 14px; border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; font-size: 15px; }
+  input:focus { outline: none; border-color: #2b6cff; }
+  button { padding: 0 18px; border: 1px solid transparent; border-radius: 10px; background: #2b6cff; color: #fff; font-size: 15px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  footer { text-align: center; padding: 18px; font-size: 12px; opacity: .55; }
+  .suggest { display:flex; flex-wrap:wrap; gap:6px; padding: 0 18px 12px; }
+  .suggest button { background: transparent; color: inherit; border: 1px solid rgba(0,0,0,0.12); border-radius: 999px; padding: 6px 12px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>💬 idai.asia AI 助手</h1>
+    <p>基于 Cloudflare Workers AI · Llama 3.1 8B · 完全免费</p>
+  </header>
+  <main>
+    <div class="card">
+      <div id="log">
+        <div class="msg bot">你好！我是 idai.asia 的智能助手，可以回答关于本站的问题，也能陪你聊技术。</div>
+      </div>
+      <div class="suggest" id="suggest">
+        <button data-q="idai.asia 是什么？">idai.asia 是什么？</button>
+        <button data-q="用了什么技术栈？">技术栈？</button>
+        <button data-q="怎么联系站长？">怎么联系？</button>
+      </div>
+      <form id="form">
+        <input id="input" autocomplete="off" placeholder="输入你的问题…" required />
+        <button id="send" type="submit">发送</button>
+      </form>
+    </div>
+    <footer>Powered by Cloudflare Workers · Workers AI</footer>
+  </main>
+<script>
+const log = document.getElementById('log');
+const form = document.getElementById('form');
+const input = document.getElementById('input');
+const send = document.getElementById('send');
+const history = [];
+
+function add(role, text) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role === 'user' ? 'user' : role === 'system' ? 'sys' : 'bot');
+  div.textContent = text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  return div;
+}
+
+async function ask(q) {
+  input.value = '';
+  add('user', q);
+  history.push({ role: 'user', content: q });
+  const thinking = add('bot', '思考中…');
+  send.disabled = true;
+  try {
+    const resp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ messages: history.slice(-10) }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || ('HTTP ' + resp.status));
+    thinking.textContent = data.reply || '(空回复)';
+    history.push({ role: 'assistant', content: data.reply || '' });
+  } catch (e) {
+    thinking.textContent = '❌ ' + (e.message || e);
+  } finally {
+    send.disabled = false;
+    input.focus();
+  }
+}
+
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const q = input.value.trim();
+  if (q) ask(q);
+});
+document.getElementById('suggest').addEventListener('click', (e) => {
+  const q = e.target.getAttribute('data-q');
+  if (q) ask(q);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+﻿name = "idai-chat"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+
+# Static assets 目录
+[assets]
+directory = "./public"
+not_found_handling = "single-page-application"
+binding = "ASSETS"
+
+# Workers AI 绑定（免费额度可用）
+[ai]
+binding = "AI"
+
+# 自定义域名，部署完自动创建 DNS + SSL
+[[routes]]
+pattern = "chat.idai.asia"
+custom_domain = true
