@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>三年级语文 · 生字·古诗·闯关</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>📚</text></svg>" />
+<style>
+  :root { color-scheme: light dark; --brand:#e11d48; --star:#f59e0b; --ok:#22c55e; --bad:#ef4444; --bg:#fef5f5; --card:#fff; --line:rgba(0,0,0,.08); --text:#1a1e2b; --muted:#6b7280; --ink:#111; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#181022; --card:#221830; --line:rgba(255,255,255,.08); --text:#f2e8f0; --muted:#a89aa4; --ink:#f2e8f0; } }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { font-family: "Kaiti","STKaiti","楷体","KaiTi",serif, system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  header { padding: 22px 16px 6px; text-align:center; }
+  header h1 { margin:0 0 4px; font-size:24px; letter-spacing:2px; }
+  header p { margin:0; color:var(--muted); font-size:13px; }
+  main { max-width: 960px; margin: 0 auto; padding: 8px 16px 80px; }
+
+  .summary { display:flex; gap:8px; align-items:center; padding: 10px 4px; flex-wrap:wrap; }
+  .s-item { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 14px; min-width:82px; text-align:center; }
+  .s-num { font-size:22px; font-weight:700; color:var(--brand); line-height:1.2; }
+  .s-lbl { font-size:11px; color:var(--muted); margin-top:2px; }
+  .ghost.sm { padding:6px 12px; font-size:12px; margin-left:auto; }
+
+  .tabs { display:flex; gap:8px; margin: 8px 0 14px; overflow-x:auto; padding-bottom:4px; }
+  .tabs button { flex:0 0 auto; padding:8px 14px; border:1px solid var(--line); background:var(--card); color:inherit; border-radius:999px; cursor:pointer; font-size:14px; }
+  .tabs button.active { background:var(--brand); color:#fff; border-color:transparent; }
+
+  .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,.05); cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(225,29,72,.14); }
+  .card h3 { margin:0 0 6px; font-size:17px; }
+  .card p { margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; background:rgba(225,29,72,.12); color:var(--brand); margin-bottom:6px; }
+  .stars { margin-top:10px; font-size:16px; color:var(--star); letter-spacing:2px; }
+  .stars.big { font-size:22px; }
+  .wrong-dot { display:inline-block; margin-left:6px; color:var(--bad); font-size:12px; }
+
+  .back { display:inline-flex; align-items:center; gap:6px; color:var(--brand); text-decoration:none; margin-bottom:10px; cursor:pointer; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:16px; padding: 16px 18px; margin-bottom:14px; }
+  .panel h2, .panel h3 { margin: 0 0 10px; }
+
+  /* 生字卡片 */
+  .zi-grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(140px,1fr)); gap:12px; }
+  .zi { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 10px; cursor:pointer; text-align:center; user-select:none; transition: all .15s; }
+  .zi:hover { border-color: var(--brand); transform: translateY(-2px); }
+  .zi .han { font-size:44px; font-weight:400; color:var(--ink); font-family:"Kaiti","STKaiti","楷体",serif; line-height:1.2; }
+  .zi .pin { color:var(--muted); font-size:13px; margin-top:2px; letter-spacing:1px; }
+  .zi .meaning { color:var(--muted); font-size:12px; margin-top:2px; }
+
+  /* 笔顺动画弹窗 */
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; animation: fadein .2s; }
+  @keyframes fadein { from { opacity:0 } to { opacity:1 } }
+  .modal .box { background:var(--card); border-radius:16px; padding:20px; max-width:420px; width:100%; text-align:center; animation: pop .25s; }
+  @keyframes pop { from { transform: scale(.85); opacity:0 } to { transform: scale(1); opacity:1 } }
+  .modal .box h3 { margin:0 0 8px; font-size: 20px; }
+  .modal .stroke-target { width: 260px; height: 260px; margin: 8px auto; border: 1px dashed var(--line); border-radius: 8px; background: linear-gradient(45deg, transparent 49%, rgba(225,29,72,.15) 49%, rgba(225,29,72,.15) 51%, transparent 51%), linear-gradient(-45deg, transparent 49%, rgba(225,29,72,.15) 49%, rgba(225,29,72,.15) 51%, transparent 51%), linear-gradient(90deg, transparent 49.5%, rgba(225,29,72,.15) 49.5%, rgba(225,29,72,.15) 50.5%, transparent 50.5%), linear-gradient(0deg, transparent 49.5%, rgba(225,29,72,.15) 49.5%, rgba(225,29,72,.15) 50.5%, transparent 50.5%); background-size: 100% 100%; }
+  .modal .row { display:flex; gap:8px; justify-content:center; margin-top:10px; flex-wrap:wrap; }
+  .modal button { padding:10px 16px; font-size:14px; border-radius:8px; border:1px solid var(--line); background:transparent; color:inherit; cursor:pointer; }
+  .modal button.primary { background:var(--brand); color:#fff; border-color:transparent; }
+  .modal .close { position:absolute; top:12px; right:14px; font-size:22px; color:#fff; cursor:pointer; }
+  .modal .info { color:var(--muted); font-size:14px; margin: 8px 0; }
+
+  /* 古诗 */
+  .poem { text-align:center; padding:16px; background: linear-gradient(135deg, rgba(225,29,72,.06), rgba(245,158,11,.06)); border-radius:14px; }
+  .poem .title { font-size:22px; font-weight:600; letter-spacing:2px; }
+  .poem .author { color:var(--muted); font-size:13px; margin: 4px 0 10px; }
+  .poem .line { font-size:22px; padding:4px 6px; margin: 2px auto; display:inline-block; cursor:pointer; letter-spacing:2px; transition: color .3s; border-radius:6px; }
+  .poem .line:hover { background: rgba(225,29,72,.1); }
+  .poem .line.active { color: var(--brand); transform: scale(1.05); font-weight: 700; }
+
+  .word-row { display:flex; flex-wrap:wrap; gap:8px; }
+  .word-chip { background:var(--card); border:1px solid var(--line); border-radius:999px; padding:6px 14px; font-size:16px; cursor:pointer; }
+  .word-chip:hover { background: rgba(225,29,72,.1); border-color: var(--brand); }
+
+  .stage-card { cursor:pointer; }
+  .stage-card:hover { transform: translateY(-1px); }
+  .stage-card.locked { opacity:.5; cursor:not-allowed; }
+
+  .quiz-head { display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; font-size:14px; color:var(--muted); }
+  .q { font-size: 22px; margin: 12px 0 14px; line-height:1.6; word-break: break-word; text-align:center; }
+  .q .big-han { font-size: 60px; color:var(--brand); font-family:"Kaiti","STKaiti","楷体",serif; line-height:1.2; letter-spacing:8px; }
+  .q .play-btn { display:inline-block; margin-left:8px; cursor:pointer; font-size:22px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; }
+  input[type=text] { padding: 12px 14px; font-size:20px; border:1px solid var(--line); background:transparent; color:inherit; border-radius:10px; width: 220px; text-align:center; }
+  input:focus { outline:none; border-color:var(--brand); }
+  button.primary { padding: 12px 20px; font-size:16px; border:none; background:var(--brand); color:#fff; border-radius:10px; cursor:pointer; transition: transform .1s; }
+  button.primary:active { transform: scale(.96); }
+  button.ghost { padding: 12px 20px; font-size:16px; background:transparent; color:inherit; border:1px solid var(--line); border-radius:10px; cursor:pointer; }
+  .feedback { margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size:15px; }
+  .feedback.ok { background: rgba(34,197,94,.12); color: var(--ok); animation: shake-ok .3s; }
+  .feedback.bad { background: rgba(239,68,68,.12); color: var(--bad); animation: shake .35s; }
+  @keyframes shake { 0%,100% { transform: translateX(0) } 25% { transform: translateX(-6px) } 75% { transform: translateX(6px) } }
+  @keyframes shake-ok { 0% { transform: scale(1) } 40% { transform: scale(1.05) } 100% { transform: scale(1) } }
+  .options { display:grid; grid-template-columns: repeat(2,1fr); gap:8px; }
+  .options button { padding: 14px; font-size:17px; border:1px solid var(--line); background:var(--card); color:inherit; border-radius:10px; cursor:pointer; transition: all .12s; }
+  .options button:hover { border-color: var(--brand); }
+  .options button.ok { border-color: var(--ok); background: rgba(34,197,94,.15); }
+  .options button.bad { border-color: var(--bad); background: rgba(239,68,68,.15); }
+  .hint { color:var(--muted); font-size:13px; margin:6px 0 0; text-align:center; }
+  .progress { height: 6px; background: var(--line); border-radius: 999px; overflow:hidden; margin: 6px 0 12px; }
+  .progress > i { display:block; height:100%; background: linear-gradient(90deg, var(--brand), var(--star)); width: 0%; transition: width .3s ease; }
+  .wrong-item { padding:10px 0; border-bottom:1px dashed var(--line); }
+  .wrong-item:last-child { border:none; }
+
+  /* 通关烟花 */
+  .firework { position:fixed; pointer-events:none; z-index:2000; font-size:32px; animation: rise 1.4s ease-out forwards; }
+  @keyframes rise { 0% { transform: translateY(0) scale(.8); opacity:1 } 100% { transform: translateY(-120px) scale(1.4); opacity:0 } }
+
+  footer { text-align:center; color:var(--muted); font-size:12px; padding: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📚 三年级语文 · 生字·古诗·闯关</h1>
+  <p>点生字看笔顺动画 · 点词语/诗句朗读 · 闯 3 关得星星</p>
+</header>
+<main id="app"></main>
+<footer>Powered by Cloudflare Workers · yuwen.idai.asia</footer>
+
+<!-- hanzi-writer 用于笔顺动画 -->
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.7/dist/hanzi-writer.min.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
