@@ -146,6 +146,47 @@
   .stage-box .shake { animation: shake-c .55s ease-in-out infinite; }
   .stage-box .stand { animation: none; }
   footer { text-align:center; color:var(--muted); font-size:12px; padding: 12px; }
+
+  /* 故事屋：更真实的舞台 */
+  .stage-box { position:relative; }
+  .stage-box .sky, .stage-box .particles, .stage-box .chars { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .stage-box .chars { transition: opacity .35s ease; }
+  .stage-box .chars.fading { opacity:0; }
+  .stage-box .ground { position:absolute; left:0; right:0; bottom:0; height:22%; background: linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.28)); z-index:1; }
+  .stage-box .chars { z-index:2; }
+  .stage-box .caption { z-index:3; letter-spacing:1.5px; }
+  .stage-box .badge-scene { z-index:3; }
+
+  /* 云 */
+  @keyframes drift { from { transform: translateX(0) } to { transform: translateX(180%) } }
+  .stage-box .cloud { position:absolute; font-size:32px; opacity:.85; filter: drop-shadow(0 2px 4px rgba(0,0,0,.15)); animation: drift 40s linear infinite; }
+
+  /* 星星 */
+  @keyframes twinkle { 0%,100% { opacity:.3; transform: scale(.6) } 50% { opacity:1; transform: scale(1) } }
+  .stage-box .star-dot { position:absolute; width:6px; height:6px; background:#fff; border-radius:50%; box-shadow: 0 0 8px #fff; animation: twinkle 2.4s ease-in-out infinite; }
+
+  /* 泡泡 */
+  @keyframes rise-bubble { 0% { transform: translateY(0) scale(.5); opacity:0 } 20% { opacity:.9 } 100% { transform: translateY(-90%) scale(1.1); opacity:0 } }
+  .stage-box .bubble { position:absolute; bottom:8%; width:14px; height:14px; border-radius:50%; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.9), rgba(255,255,255,.2) 60%, rgba(255,255,255,0)); animation: rise-bubble 4s ease-in infinite; }
+
+  /* 火花 */
+  @keyframes flicker { 0%,100% { opacity:0; transform: translateY(0) scale(.8) } 50% { opacity:1; transform: translateY(-14px) scale(1.15) } }
+  .stage-box .spark { position:absolute; top:65%; font-size:18px; animation: flicker 1.6s ease-in-out infinite; }
+
+  /* 落叶 */
+  @keyframes fall { 0% { transform: translateY(-30%) rotate(0deg); opacity:0 } 10% { opacity:1 } 100% { transform: translateY(110%) rotate(720deg); opacity:0 } }
+  .stage-box .leaf { position:absolute; top:0; font-size:22px; animation: fall 8s linear infinite; }
+
+  /* 角色更自然：呼吸 + 上下 + 微微旋转 —— 覆盖原来生硬的 keyframes */
+  @keyframes bounce { 0%,100% { transform: translate(-50%,-50%) translateY(0) rotate(-1deg) } 50% { transform: translate(-50%,-50%) translateY(-8px) rotate(2deg) } }
+  @keyframes float { 0%,100% { transform: translate(-50%,-50%) translateY(0) rotate(0deg) } 33% { transform: translate(-50%,-50%) translateY(-5px) rotate(3deg) } 66% { transform: translate(-50%,-50%) translateY(-2px) rotate(-3deg) } }
+  @keyframes walk-r { 0% { transform: translate(-50%,-50%) translateX(-9vw) rotate(-3deg) } 50% { transform: translate(-50%,-50%) translateX(0) translateY(-4px) } 100% { transform: translate(-50%,-50%) translateX(9vw) rotate(3deg) } }
+  @keyframes walk-l { 0% { transform: translate(-50%,-50%) translateX(9vw) scaleX(-1) rotate(-3deg) } 50% { transform: translate(-50%,-50%) translateX(0) scaleX(-1) translateY(-4px) } 100% { transform: translate(-50%,-50%) translateX(-9vw) scaleX(-1) rotate(3deg) } }
+  @keyframes walk-fast { 0% { transform: translate(-50%,-50%) translateX(-14vw) rotate(-6deg) } 50% { transform: translate(-50%,-50%) translateY(-8px) } 100% { transform: translate(-50%,-50%) translateX(14vw) rotate(6deg) } }
+  @keyframes graze { 0%,100% { transform: translate(-50%,-50%) rotate(-8deg) translateY(0) } 50% { transform: translate(-50%,-50%) rotate(8deg) translateY(-4px) } }
+  @keyframes shake-c { 0%,100% { transform: translate(-50%,-50%) rotate(-6deg) translateX(-2px) } 50% { transform: translate(-50%,-50%) rotate(6deg) translateX(2px) } }
+  @keyframes breathe { 0%,100% { transform: translate(-50%,-50%) scale(1) } 50% { transform: translate(-50%,-50%) scale(1.06) } }
+  .stage-box .stand { animation: breathe 3.2s ease-in-out infinite; }
 </style>
 </head>
 <body>

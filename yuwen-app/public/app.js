@@ -33,20 +33,40 @@ const tts = {
     const r = parseFloat(localStorage.getItem('yw.rate') || '0.9');
     if (r >= 0.5 && r <= 1.3) this.rate = r;
   },
+  _keepAlive: null,
+  _startKeepAlive() {
+    // Chrome 有 ~15s 自动暂停的 bug，用 pause/resume 维持
+    if (this._keepAlive) return;
+    this._keepAlive = setInterval(() => {
+      try {
+        if (speechSynthesis.speaking) { speechSynthesis.pause(); speechSynthesis.resume(); }
+      } catch(e){}
+    }, 8000);
+  },
+  _stopKeepAlive() { if (this._keepAlive) { clearInterval(this._keepAlive); this._keepAlive = null; } },
+  _split(text) {
+    // 按中文标点断句，避免单句太长（Chrome 长句易断）
+    const parts = String(text).split(/(?<=[。！？!?…；;])/).map(s=>s.trim()).filter(Boolean);
+    return parts.length ? parts : [String(text)];
+  },
   speak(text, onend) {
     if (!this.supported) return;
-    try {
-      if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
+    this.cancel();
+    const list = this._split(text);
+    let i = 0;
+    const speakNext = () => {
+      if (i >= list.length) { this._stopKeepAlive(); if (onend) onend(); return; }
+      const u = new SpeechSynthesisUtterance(list[i++]);
       u.rate = this.rate; u.pitch = 1;
       if (this.pref) u.voice = this.pref;
       u.lang = (this.pref && this.pref.lang) || 'zh-CN';
-      if (onend) u.onend = () => setTimeout(onend, 200);
-      u.onerror = (e) => { const err = e && e.error; if (err==='interrupted'||err==='canceled') return; console.warn('tts err', err); };
-      speechSynthesis.speak(u);
-    } catch (e) { console.warn(e); }
+      u.onend = () => setTimeout(speakNext, 120);
+      u.onerror = (e) => { const err = e && e.error; if (err==='interrupted'||err==='canceled') { this._stopKeepAlive(); return; } setTimeout(speakNext, 120); };
+      try { speechSynthesis.speak(u); this._startKeepAlive(); } catch(e){ console.warn(e); }
+    };
+    setTimeout(speakNext, 60);
   },
-  cancel() { try { speechSynthesis.cancel(); } catch(e){} },
+  cancel() { this._stopKeepAlive(); try { speechSynthesis.cancel(); } catch(e){} },
   setVoice(uri) { const v = this.voices.find(x => x.voiceURI === uri); if (v) { this.pref = v; localStorage.setItem('yw.voice', uri); } },
   setRate(r) { this.rate = r; localStorage.setItem('yw.rate', String(r)); },
   speakSeq(list, i=0, onWord) {
@@ -780,78 +800,175 @@ function renderStories() {
     </div>`;
   bindVoiceBar();
   document.getElementById('back').onclick = () => nav('home');
-  app.querySelectorAll('.story-card').forEach(el => el.onclick = () => nav('story', { sid: el.dataset.id, scene: 0, autoplay:false }));
+  app.querySelectorAll('.story-card').forEach(el => el.onclick = () => nav('story', { sid: el.dataset.id, scene: 0 }));
 }
+
+// 全局故事播放上下文（不依赖 state.autoplay，避免重渲染打断 TTS）
+const storyCtx = { playing:false, timer:null };
 
 function renderStory() {
   const st = (window.STORIES||[]).find(x=>x.id===state.sid); if (!st) return nav('stories');
-  const idx = Math.max(0, Math.min(state.scene||0, st.scenes.length-1));
-  const sc = st.scenes[idx];
-  const savedDone = store.getStory(st.id).done;
+  let idx = Math.max(0, Math.min(state.scene||0, st.scenes.length-1));
+
   app.innerHTML = `
     <a class="back" id="back">← 返回故事屋</a>
     ${voiceBar()}
     <div class="panel">
       <div class="badge">${st.kind}</div>
       <h2 style="margin:6px 0 4px">${st.emoji} ${st.title}</h2>
-      <div class="stage-box" id="stage" style="background:${sc.bg}">
-        <span class="badge-scene">第 ${idx+1} 幕 / ${st.scenes.length}</span>
-        ${(sc.chars||[]).map(c=>`<span class="ch ${c.cls}" style="left:${c.x}%;top:${c.y}%">${c.e}</span>`).join('')}
+      <div class="stage-box" id="stage">
+        <div class="sky" id="sky"></div>
+        <div class="particles" id="particles"></div>
+        <span class="badge-scene" id="badge-scene"></span>
+        <div class="chars" id="chars"></div>
         <div class="ground"></div>
-        <div class="caption" id="caption">${sc.text}</div>
+        <div class="caption" id="caption"></div>
       </div>
       <div class="stage-toolbar">
         <button class="primary" id="play">🔊 朗读本幕</button>
+        <button class="primary" id="playall" style="background:#7c3aed">▶️ 整篇播放</button>
         <button class="ghost" id="stop">⏸ 停止</button>
-        <button class="ghost" id="prev" ${idx===0?'disabled':''}>◀ 上一幕</button>
-        <button class="ghost" id="next">${idx===st.scenes.length-1?'完成 ✅':'下一幕 ▶'}</button>
-        <div class="dots">
-          ${st.scenes.map((_,i)=>`<i class="${i===idx?'on':''}" data-i="${i}"></i>`).join('')}
-        </div>
+        <button class="ghost" id="prev">◀</button>
+        <button class="ghost" id="next">▶</button>
+        <div class="dots" id="dots"></div>
       </div>
-      ${idx===st.scenes.length-1 ? `
-      <div class="moral-card">
-        <b>💡 寓意：</b>${st.moral||''}
+      <div class="moral-card" id="moral" style="display:none">
+        <b>💡 寓意：</b><span id="moral-text"></span>
       </div>
-      <div class="panel" style="margin-top:12px">
-        <h3 style="margin-top:0">🔁 整体跟读</h3>
-        <p style="color:var(--muted);font-size:14px">点击「整篇朗读」，会自动切换幕并朗读每一段文字。</p>
-        <div class="row">
-          <button class="primary" id="play-all">▶️ 整篇朗读</button>
-          <button class="ghost" id="again">🔄 从头再看</button>
-        </div>
-      </div>` : ''}
     </div>`;
   bindVoiceBar();
-  document.getElementById('back').onclick = () => { tts.cancel(); nav('stories'); };
-  document.getElementById('play').onclick = () => { tts.cancel(); tts.speak(sc.text); };
-  document.getElementById('stop').onclick = () => tts.cancel();
-  document.getElementById('prev').onclick = () => { tts.cancel(); nav('story', { sid: st.id, scene: idx-1 }); };
-  document.getElementById('next').onclick = () => {
-    tts.cancel();
-    if (idx === st.scenes.length-1) {
-      if (!savedDone) store.saveStory(st.id, { done:true, scene: idx });
-      firework();
-      nav('stories');
-    } else {
-      nav('story', { sid: st.id, scene: idx+1 });
-    }
-  };
-  app.querySelectorAll('.dots i').forEach(d => d.onclick = () => { tts.cancel(); nav('story', { sid: st.id, scene: parseInt(d.dataset.i,10) }); });
-  const playAll = document.getElementById('play-all');
-  if (playAll) playAll.onclick = () => playWholeStory(st);
-  const again = document.getElementById('again'); if (again) again.onclick = () => nav('story', { sid: st.id, scene:0 });
 
-  // 进入即自动朗读（如果 autoplay=true 或 用户在整篇播放里）
-  if (state.autoplay) {
-    setTimeout(() => tts.speak(sc.text, () => {
-      if (state.autoplay && idx < st.scenes.length-1) nav('story', { sid: st.id, scene: idx+1, autoplay:true });
-      else if (state.autoplay) { state.autoplay=false; if (!savedDone) store.saveStory(st.id,{done:true,scene:idx}); firework(); }
-    }), 250);
+  const stageEl = document.getElementById('stage');
+  const capEl = document.getElementById('caption');
+  const charsEl = document.getElementById('chars');
+  const badgeEl = document.getElementById('badge-scene');
+  const dotsEl = document.getElementById('dots');
+  const moralEl = document.getElementById('moral');
+  const moralText = document.getElementById('moral-text');
+  const skyEl = document.getElementById('sky');
+  const ptEl = document.getElementById('particles');
+
+  function paintScene(i, animateIn=true) {
+    idx = i;
+    state.scene = i;
+    const sc = st.scenes[i];
+    stageEl.style.background = sc.bg;
+    badgeEl.textContent = `第 ${i+1} 幕 / ${st.scenes.length}`;
+    // 背景装饰：根据 bg 关键词生成天气/粒子
+    skyEl.innerHTML = detectSkyLayer(sc);
+    ptEl.innerHTML = detectParticles(sc);
+
+    // 角色淡入 + 随机 delay，动画更自然
+    if (animateIn) charsEl.classList.add('fading');
+    charsEl.innerHTML = (sc.chars||[]).map((c, k) => {
+      const delay = (Math.random()*0.6).toFixed(2);
+      const dur = (1.6 + Math.random()*1.6).toFixed(2);
+      return `<span class="ch ${c.cls}" style="left:${c.x}%;top:${c.y}%;animation-delay:${delay}s;animation-duration:${dur}s">${c.e}</span>`;
+    }).join('');
+    // 字幕打字机
+    typeCaption(sc.text);
+    if (animateIn) requestAnimationFrame(() => { charsEl.classList.remove('fading'); });
+
+    // 圆点
+    dotsEl.innerHTML = st.scenes.map((_,j)=>`<i class="${j===i?'on':''}" data-i="${j}"></i>`).join('');
+    dotsEl.querySelectorAll('i').forEach(d => d.onclick = () => { stopAll(); paintScene(parseInt(d.dataset.i,10)); });
+
+    // 寓意（最后一幕才显示）
+    if (i === st.scenes.length-1) {
+      moralEl.style.display = '';
+      moralText.textContent = st.moral || '';
+      const prev = store.getStory(st.id);
+      if (!prev.done) { store.saveStory(st.id, { done:true, scene:i }); firework(); }
+    } else {
+      moralEl.style.display = 'none';
+    }
   }
+
+  let typeTimer = null;
+  function typeCaption(text) {
+    if (typeTimer) { clearInterval(typeTimer); typeTimer = null; }
+    capEl.textContent = '';
+    let j = 0;
+    typeTimer = setInterval(() => {
+      if (j >= text.length) { clearInterval(typeTimer); typeTimer=null; return; }
+      capEl.textContent += text[j++];
+    }, 55);
+  }
+
+  function stopAll() {
+    storyCtx.playing = false;
+    tts.cancel();
+    if (storyCtx.timer) { clearTimeout(storyCtx.timer); storyCtx.timer = null; }
+  }
+
+  function playCurrent() {
+    stopAll();
+    tts.speak(st.scenes[idx].text);
+  }
+
+  function playAll() {
+    stopAll();
+    storyCtx.playing = true;
+    paintScene(0);
+    const step = () => {
+      if (!storyCtx.playing) return;
+      tts.speak(st.scenes[idx].text, () => {
+        if (!storyCtx.playing) return;
+        if (idx < st.scenes.length - 1) {
+          storyCtx.timer = setTimeout(() => { if(!storyCtx.playing) return; paintScene(idx+1); storyCtx.timer=setTimeout(step, 250); }, 500);
+        } else {
+          storyCtx.playing = false;
+        }
+      });
+    };
+    storyCtx.timer = setTimeout(step, 500);
+  }
+
+  // 初始渲染
+  paintScene(idx, false);
+
+  document.getElementById('back').onclick = () => { stopAll(); nav('stories'); };
+  document.getElementById('play').onclick = playCurrent;
+  document.getElementById('playall').onclick = playAll;
+  document.getElementById('stop').onclick = stopAll;
+  document.getElementById('prev').onclick = () => { stopAll(); paintScene(Math.max(0, idx-1)); };
+  document.getElementById('next').onclick = () => { stopAll(); paintScene(Math.min(st.scenes.length-1, idx+1)); };
 }
 
-function playWholeStory(st) {
-  tts.cancel();
-  nav('story', { sid: st.id, scene: 0, autoplay: true });
+// 根据场景背景猜配天气层（云/星/雨滴，纯装饰）
+function detectSkyLayer(sc) {
+  const bg = sc.bg || '';
+  const chars = (sc.chars||[]).map(c=>c.e).join('');
+  const dark = /#0f172a|#1e3a8a|#312e81/.test(bg);
+  const sunny = /#fbbf24|#fef3c7|#fed7aa|#fde68a/.test(bg);
+  if (dark) {
+    // 夜晚：几颗星
+    let s=''; for (let i=0;i<6;i++) s += `<span class="star-dot" style="left:${5+Math.random()*90}%;top:${3+Math.random()*35}%;animation-delay:${(Math.random()*2).toFixed(2)}s"></span>`;
+    return s;
+  }
+  if (chars.includes('☀️') || sunny) {
+    // 白天：两朵云飘
+    return `<span class="cloud" style="top:12%;left:-15%;animation-duration:38s">☁️</span><span class="cloud" style="top:22%;left:-40%;animation-duration:52s;font-size:.7em">☁️</span>`;
+  }
+  return '';
+}
+function detectParticles(sc) {
+  const t = sc.text || '';
+  const chars = (sc.chars||[]).map(c=>c.e).join('');
+  // 有水/海：泡泡
+  if (chars.includes('🌊') || /海|水|江|河/.test(t)) {
+    let s=''; for (let i=0;i<8;i++) s += `<span class="bubble" style="left:${5+Math.random()*90}%;animation-delay:${(Math.random()*4).toFixed(2)}s;animation-duration:${(3+Math.random()*3).toFixed(2)}s"></span>`;
+    return s;
+  }
+  // 有火/太阳：火花
+  if (chars.includes('🔥') || /火|烤|燃/.test(t)) {
+    let s=''; for (let i=0;i<6;i++) s += `<span class="spark" style="left:${20+Math.random()*60}%;animation-delay:${(Math.random()*2).toFixed(2)}s">✨</span>`;
+    return s;
+  }
+  // 秋/落叶
+  if (/秋|落叶|山行|杜牧/.test(t)) {
+    let s=''; for (let i=0;i<6;i++) s += `<span class="leaf" style="left:${Math.random()*100}%;animation-delay:${(Math.random()*5).toFixed(2)}s;animation-duration:${(6+Math.random()*4).toFixed(2)}s">🍂</span>`;
+    return s;
+  }
+  return '';
 }
