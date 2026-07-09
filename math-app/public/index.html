@@ -1,40 +1,55 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>小学三年级数学 · 学习与练习</title>
+<title>小学三年级数学 · 学习+练习+闯关</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🧮</text></svg>" />
 <style>
-  :root { color-scheme: light dark; --brand:#2b6cff; --ok:#22c55e; --bad:#ef4444; --bg:#f5f7fb; --card:#fff; --line:rgba(0,0,0,.08); --text:#1a1e2b; --muted:#6b7280; }
+  :root { color-scheme: light dark; --brand:#2b6cff; --star:#f59e0b; --ok:#22c55e; --bad:#ef4444; --bg:#f5f7fb; --card:#fff; --line:rgba(0,0,0,.08); --text:#1a1e2b; --muted:#6b7280; }
   @media (prefers-color-scheme: dark) {
     :root { --bg:#0f1420; --card:#171c2b; --line:rgba(255,255,255,.08); --text:#e8ecf5; --muted:#9aa3b2; }
   }
   * { box-sizing: border-box; }
   html, body { margin:0; padding:0; }
   body { font-family: system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
-  header { padding: 22px 16px 8px; text-align:center; }
+  header { padding: 22px 16px 6px; text-align:center; }
   header h1 { margin:0 0 4px; font-size:22px; }
   header p { margin:0; color:var(--muted); font-size:13px; }
-  main { max-width: 900px; margin: 0 auto; padding: 12px 16px 60px; }
-  .tabs { display:flex; gap:8px; margin: 14px 0 18px; overflow-x:auto; padding-bottom: 4px; }
+  main { max-width: 900px; margin: 0 auto; padding: 8px 16px 60px; }
+
+  .summary { display:flex; gap:8px; align-items:center; padding: 10px 4px; flex-wrap:wrap; }
+  .s-item { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 14px; min-width:82px; text-align:center; }
+  .s-num { font-size:22px; font-weight:700; color:var(--brand); line-height:1.2; }
+  .s-lbl { font-size:11px; color:var(--muted); margin-top:2px; }
+  .ghost.sm { padding:6px 12px; font-size:12px; margin-left:auto; }
+
+  .tabs { display:flex; gap:8px; margin: 6px 0 14px; overflow-x:auto; padding-bottom:4px; }
   .tabs button { flex:0 0 auto; padding:8px 14px; border:1px solid var(--line); background:var(--card); color:inherit; border-radius:999px; cursor:pointer; font-size:14px; }
   .tabs button.active { background:var(--brand); color:#fff; border-color:transparent; }
+
   .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,.04); cursor:pointer; transition:transform .1s ease; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,.04); cursor:pointer; transition:transform .1s ease; position:relative; }
   .card:hover { transform: translateY(-2px); }
   .card h3 { margin:0 0 6px; font-size:16px; }
   .card p { margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
   .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; background:rgba(43,108,255,.12); color:var(--brand); margin-bottom:6px; }
+  .stars { margin-top:10px; font-size:16px; color:var(--star); letter-spacing:2px; }
+  .stars.big { font-size:22px; }
+  .wrong-dot { display:inline-block; margin-left:6px; color:var(--bad); font-size:12px; }
 
-  /* 学习/练习页 */
   .back { display:inline-flex; align-items:center; gap:6px; color:var(--brand); text-decoration:none; margin-bottom:10px; cursor:pointer; }
-  .panel { background:var(--card); border:1px solid var(--line); border-radius:16px; padding: 18px 20px; margin-bottom:14px; }
-  .panel h2 { margin: 0 0 10px; font-size:18px; }
-  .panel p, .panel li { line-height:1.75; }
-  .kbd { padding:2px 6px; border-radius:6px; background:rgba(43,108,255,.1); font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:16px; padding: 16px 18px; margin-bottom:14px; }
+  .panel h2, .panel h3 { margin: 0 0 10px; }
+  .lesson { padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .lesson:last-child { border-bottom:none; }
+  .lesson h4 { margin:0 0 4px; font-size:15px; color:var(--brand); }
+  .lesson p { margin:0; line-height:1.7; }
 
-  /* 题目 */
+  .stage-card { cursor:pointer; }
+  .stage-card:hover { transform: translateY(-1px); }
+  .stage-card.locked { opacity:.5; cursor:not-allowed; }
+
   .quiz-head { display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; font-size:14px; color:var(--muted); }
   .q { font-size: 22px; margin: 10px 0 14px; line-height:1.5; word-break: break-word; }
   .q .blank { display:inline-block; min-width: 90px; border-bottom: 2px solid var(--brand); padding: 0 6px; margin: 0 2px; text-align:center; }
@@ -51,21 +66,25 @@
   .options button { padding: 14px; font-size:16px; border:1px solid var(--line); background:var(--card); color:inherit; border-radius:10px; cursor:pointer; }
   .options button.ok { border-color: var(--ok); background: rgba(34,197,94,.12); }
   .options button.bad { border-color: var(--bad); background: rgba(239,68,68,.12); }
-
+  .hint { color:var(--muted); font-size:13px; margin:6px 0 0; }
   .progress { height: 6px; background: var(--line); border-radius: 999px; overflow:hidden; margin: 6px 0 12px; }
   .progress > i { display:block; height:100%; background: var(--brand); width: 0%; transition: width .2s ease; }
+
+  .wrong-item { padding:10px 0; border-bottom:1px dashed var(--line); }
+  .wrong-item:last-child { border:none; }
+  .wq { line-height:1.6; }
+  .wa { margin-top:4px; color:var(--muted); font-size:14px; }
 
   footer { text-align:center; color:var(--muted); font-size:12px; padding: 12px; }
 </style>
 </head>
 <body>
 <header>
-  <h1>🧮 三年级数学 · 学习与练习</h1>
-  <p>按章节学习知识点，再做题巩固。数据全在本地，无需登录。</p>
+  <h1>🧮 三年级数学 · 学习 + 练习 + 闯关</h1>
+  <p>按章节学知识点、闯 3 关得星星、错题自动记录，全本地无需登录</p>
 </header>
 <main id="app"></main>
 <footer>Powered by Cloudflare Workers · math.idai.asia</footer>
-
 <script src="/app.js"></script>
 </body>
 </html>
