@@ -1,4 +1,4 @@
-﻿/* 三年级语文 SPA
+/* 三年级语文 SPA
  * - 生字：拼音 + 部首 + 释义 + hanzi-writer 笔顺动画
  * - 词语 & 古诗：中文 TTS 朗读，逐句高亮
  * - 4 种题型闯关：看字选拼音 / 看拼音选字 / 看义选词 / 补全古诗
@@ -33,7 +33,7 @@ const tts = {
     const r = parseFloat(localStorage.getItem('yw.rate') || '0.9');
     if (r >= 0.5 && r <= 1.3) this.rate = r;
   },
-  speak(text) {
+  speak(text, onend) {
     if (!this.supported) return;
     try {
       if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
@@ -41,10 +41,12 @@ const tts = {
       u.rate = this.rate; u.pitch = 1;
       if (this.pref) u.voice = this.pref;
       u.lang = (this.pref && this.pref.lang) || 'zh-CN';
+      if (onend) u.onend = () => setTimeout(onend, 200);
       u.onerror = (e) => { const err = e && e.error; if (err==='interrupted'||err==='canceled') return; console.warn('tts err', err); };
       speechSynthesis.speak(u);
     } catch (e) { console.warn(e); }
   },
+  cancel() { try { speechSynthesis.cancel(); } catch(e){} },
   setVoice(uri) { const v = this.voices.find(x => x.voiceURI === uri); if (v) { this.pref = v; localStorage.setItem('yw.voice', uri); } },
   setRate(r) { this.rate = r; localStorage.setItem('yw.rate', String(r)); },
   speakSeq(list, i=0, onWord) {
@@ -72,6 +74,9 @@ const store = {
   addWrong(id, item) { const d=this._read(); const r=d[id]||{stars:0,best:0,totalRight:0,totalWrong:0,wrongList:[]}; r.wrongList=[item,...(r.wrongList||[])].slice(0,40); d[id]=r; this._write(d); },
   clearWrong(id) { const d=this._read(); if (d[id]) { d[id].wrongList=[]; this._write(d); } },
   incStat(id, right) { const d=this._read(); const r=d[id]||{stars:0,best:0,totalRight:0,totalWrong:0,wrongList:[]}; if(right) r.totalRight++; else r.totalWrong++; d[id]=r; this._write(d); },
+
+  getStory(id) { const d=this._read(); return (d.__stories||{})[id]||{done:false,scene:0}; },
+  saveStory(id, patch) { const d=this._read(); const st=d.__stories||{}; st[id]=Object.assign(this.getStory(id),patch); d.__stories=st; this._write(d); },
   reset() { localStorage.removeItem(this.ns); }
 };
 
@@ -454,6 +459,7 @@ function renderHome() {
       <div class="s-item"><div class="s-num">${totalStars}</div><div class="s-lbl">⭐ 星星</div></div>
       <div class="s-item"><div class="s-num">${wrongTotal}</div><div class="s-lbl">📕 错题</div></div>
       <div class="s-item"><div class="s-num">${UNITS.length}</div><div class="s-lbl">📚 单元</div></div>
+      <button class="ghost sm" id="btn-stories" style="margin-left:auto">📖 故事屋</button>
       <button class="ghost sm" id="reset">🗑️ 清空进度</button>
     </div>
     <div class="tabs">
@@ -473,6 +479,7 @@ function renderHome() {
   bindVoiceBar();
   app.querySelectorAll('.tabs button').forEach(b => b.onclick = () => nav('home', { term: b.dataset.term }));
   app.querySelectorAll('.card').forEach(el => el.onclick = () => nav('unit', { uid: el.dataset.id }));
+  document.getElementById('btn-stories').onclick = () => nav('stories');
   document.getElementById('reset').onclick = () => { if (confirm('确定清空所有星星和错题？')) { store.reset(); render(); } };
 }
 
@@ -743,7 +750,108 @@ function renderWrongbook() {
 }
 
 function render() {
-  const m = { home: renderHome, unit: renderUnit, quiz: renderQuiz, 'stage-select': renderStageSelect, wrongbook: renderWrongbook };
+  const m = { home: renderHome, unit: renderUnit, quiz: renderQuiz, 'stage-select': renderStageSelect, wrongbook: renderWrongbook, stories: renderStories, story: renderStory };
   (m[state.view] || renderHome)();
 }
 render();
+
+// ============ 故事屋 ============
+function renderStories() {
+  const list = (window.STORIES || []);
+  let done = 0; for (const st of list) if (store.getStory(st.id).done) done++;
+  app.innerHTML = `
+    <a class="back" id="back">← 返回目录</a>
+    ${voiceBar()}
+    <div class="panel">
+      <h2 style="margin:0 0 4px">📖 故事屋</h2>
+      <p style="color:var(--muted);margin:0">看动画 · 听朗读 · 学寓意（已读 ${done} / ${list.length}）</p>
+    </div>
+    <div class="story-grid">
+      ${list.map(st => {
+        const r = store.getStory(st.id);
+        return `<div class="story-card" data-id="${st.id}">
+          ${r.done?'<span class="done">✅</span>':''}
+          <div class="emoji">${st.emoji}</div>
+          <div class="kind">${st.kind}</div>
+          <div class="st-title">${st.title}</div>
+          <div class="tag-row" style="justify-content:center">${(st.tags||[]).slice(0,3).map(t=>`<span>${t}</span>`).join('')}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  bindVoiceBar();
+  document.getElementById('back').onclick = () => nav('home');
+  app.querySelectorAll('.story-card').forEach(el => el.onclick = () => nav('story', { sid: el.dataset.id, scene: 0, autoplay:false }));
+}
+
+function renderStory() {
+  const st = (window.STORIES||[]).find(x=>x.id===state.sid); if (!st) return nav('stories');
+  const idx = Math.max(0, Math.min(state.scene||0, st.scenes.length-1));
+  const sc = st.scenes[idx];
+  const savedDone = store.getStory(st.id).done;
+  app.innerHTML = `
+    <a class="back" id="back">← 返回故事屋</a>
+    ${voiceBar()}
+    <div class="panel">
+      <div class="badge">${st.kind}</div>
+      <h2 style="margin:6px 0 4px">${st.emoji} ${st.title}</h2>
+      <div class="stage-box" id="stage" style="background:${sc.bg}">
+        <span class="badge-scene">第 ${idx+1} 幕 / ${st.scenes.length}</span>
+        ${(sc.chars||[]).map(c=>`<span class="ch ${c.cls}" style="left:${c.x}%;top:${c.y}%">${c.e}</span>`).join('')}
+        <div class="ground"></div>
+        <div class="caption" id="caption">${sc.text}</div>
+      </div>
+      <div class="stage-toolbar">
+        <button class="primary" id="play">🔊 朗读本幕</button>
+        <button class="ghost" id="stop">⏸ 停止</button>
+        <button class="ghost" id="prev" ${idx===0?'disabled':''}>◀ 上一幕</button>
+        <button class="ghost" id="next">${idx===st.scenes.length-1?'完成 ✅':'下一幕 ▶'}</button>
+        <div class="dots">
+          ${st.scenes.map((_,i)=>`<i class="${i===idx?'on':''}" data-i="${i}"></i>`).join('')}
+        </div>
+      </div>
+      ${idx===st.scenes.length-1 ? `
+      <div class="moral-card">
+        <b>💡 寓意：</b>${st.moral||''}
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <h3 style="margin-top:0">🔁 整体跟读</h3>
+        <p style="color:var(--muted);font-size:14px">点击「整篇朗读」，会自动切换幕并朗读每一段文字。</p>
+        <div class="row">
+          <button class="primary" id="play-all">▶️ 整篇朗读</button>
+          <button class="ghost" id="again">🔄 从头再看</button>
+        </div>
+      </div>` : ''}
+    </div>`;
+  bindVoiceBar();
+  document.getElementById('back').onclick = () => { tts.cancel(); nav('stories'); };
+  document.getElementById('play').onclick = () => { tts.cancel(); tts.speak(sc.text); };
+  document.getElementById('stop').onclick = () => tts.cancel();
+  document.getElementById('prev').onclick = () => { tts.cancel(); nav('story', { sid: st.id, scene: idx-1 }); };
+  document.getElementById('next').onclick = () => {
+    tts.cancel();
+    if (idx === st.scenes.length-1) {
+      if (!savedDone) store.saveStory(st.id, { done:true, scene: idx });
+      firework();
+      nav('stories');
+    } else {
+      nav('story', { sid: st.id, scene: idx+1 });
+    }
+  };
+  app.querySelectorAll('.dots i').forEach(d => d.onclick = () => { tts.cancel(); nav('story', { sid: st.id, scene: parseInt(d.dataset.i,10) }); });
+  const playAll = document.getElementById('play-all');
+  if (playAll) playAll.onclick = () => playWholeStory(st);
+  const again = document.getElementById('again'); if (again) again.onclick = () => nav('story', { sid: st.id, scene:0 });
+
+  // 进入即自动朗读（如果 autoplay=true 或 用户在整篇播放里）
+  if (state.autoplay) {
+    setTimeout(() => tts.speak(sc.text, () => {
+      if (state.autoplay && idx < st.scenes.length-1) nav('story', { sid: st.id, scene: idx+1, autoplay:true });
+      else if (state.autoplay) { state.autoplay=false; if (!savedDone) store.saveStory(st.id,{done:true,scene:idx}); firework(); }
+    }), 250);
+  }
+}
+
+function playWholeStory(st) {
+  tts.cancel();
+  nav('story', { sid: st.id, scene: 0, autoplay: true });
+}
