@@ -45,20 +45,22 @@ const tts = {
       return;
     }
     try {
-      speechSynthesis.cancel();
+      if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.rate = this.rate;
       u.pitch = 1;
       if (this.pref) u.voice = this.pref;
       u.lang = (this.pref && this.pref.lang) || 'en-US';
-      u.onerror = (e) => window.__ttsWarn && window.__ttsWarn('播放失败：' + (e.error || 'unknown'));
+      u.onerror = (e) => { const err = e && e.error; if (err === 'interrupted' || err === 'canceled') return; window.__ttsWarn && window.__ttsWarn('播放失败：' + (err || 'unknown')); };
       speechSynthesis.speak(u);
       // iOS/Safari 有时首次调用会静默失败，简单检测：500ms 后没在说话就提示
+      // Chrome 大声朗读需要 400ms+ 才会 speaking=true；连点会 interrupted，是正常的
       setTimeout(() => {
-        if (!speechSynthesis.speaking && !speechSynthesis.pending) {
-          window.__ttsWarn && window.__ttsWarn('没有听到声音？请检查系统音量，或换 Chrome/Edge 浏览器（顶部下拉选择英文语音）。');
+        if (!speechSynthesis.speaking && !speechSynthesis.pending && !speechSynthesis.paused) {
+          // 只有一直没响才提示
+          window.__ttsWarn && window.__ttsWarn('没有听到声音？请检查系统音量与浏览器权限。');
         }
-      }, 800);
+      }, 1500);
     } catch (e) { console.warn('tts fail', e); window.__ttsWarn && window.__ttsWarn('语音失败：'+e.message); }
   },
   setVoice(uri) {
@@ -76,6 +78,7 @@ tts.speakSeq = function(list, i=0){
   if (this.pref) u.voice = this.pref;
   u.lang = (this.pref && this.pref.lang) || 'en-US';
   u.onend = () => setTimeout(() => tts.speakSeq(list, i+1), 250);
+  u.onerror = (e) => { const err = e && e.error; if (err === 'interrupted' || err === 'canceled') return; console.warn('seq tts err', err); };
   speechSynthesis.speak(u);
 };
 
