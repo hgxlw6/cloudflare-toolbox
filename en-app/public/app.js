@@ -49,6 +49,17 @@ const tts = {
   setRate(r) { this.rate = r; localStorage.setItem('g3en.rate', String(r)); },
 };
 tts.init();
+tts.speakSeq = function(list, i=0){
+  if (!('speechSynthesis' in window) || !list || i >= list.length) return;
+  try { speechSynthesis.cancel(); } catch(e){}
+  const u = new SpeechSynthesisUtterance(list[i]);
+  u.rate = this.rate; u.pitch = 1;
+  if (this.pref) u.voice = this.pref;
+  u.lang = (this.pref && this.pref.lang) || 'en-US';
+  u.onend = () => setTimeout(() => tts.speakSeq(list, i+1), 250);
+  speechSynthesis.speak(u);
+};
+
 
 // ============ 存储层 ============
 const store = {
@@ -92,7 +103,7 @@ const same = (a,b) => normEn(a) === normEn(b);
 // ============ Unit 数据（人教版 PEP 三年级上册） ============
 const UNITS = [
   {
-    id:'u1', title:'Unit 1 · Hello!',
+    id:'u1', title:'Unit 1 · Hello!', term:'上册',
     desc:'打招呼与自我介绍',
     words:[
       {en:'hello', ipa:'/həˈloʊ/', cn:'你好'},
@@ -138,7 +149,7 @@ const UNITS = [
       book`
   },
   {
-    id:'u2', title:'Unit 2 · Colours',
+    id:'u2', title:'Unit 2 · Colours', term:'上册',
     desc:'颜色',
     words:[
       {en:'red', ipa:'/red/', cn:'红色的'},
@@ -179,7 +190,7 @@ const UNITS = [
       It is ___`
   },
   {
-    id:'u3', title:'Unit 3 · Look at me!',
+    id:'u3', title:'Unit 3 · Look at me!', term:'上册',
     desc:'身体部位',
     words:[
       {en:'face', ipa:'/feɪs/', cn:'脸'},
@@ -221,7 +232,7 @@ const UNITS = [
       Wave your ___`
   },
   {
-    id:'u4', title:'Unit 4 · We love animals',
+    id:'u4', title:'Unit 4 · We love animals', term:'上册',
     desc:'动物',
     words:[
       {en:'cat', ipa:'/kæt/', cn:'猫'},
@@ -266,7 +277,7 @@ const UNITS = [
       It is a ___`
   },
   {
-    id:'u5', title:'Unit 5 · Let\u2019s eat!',
+    id:'u5', title:'Unit 5 · Let\u2019s eat!', term:'上册',
     desc:'食物和饮料',
     words:[
       {en:'bread', ipa:'/bred/', cn:'面包'},
@@ -314,7 +325,7 @@ const UNITS = [
       Have some ___`
   },
   {
-    id:'u6', title:'Unit 6 · Happy birthday!',
+    id:'u6', title:'Unit 6 · Happy birthday!', term:'上册',
     desc:'生日与数字',
     words:[
       {en:'one', ipa:'/wʌn/', cn:'一'},
@@ -358,6 +369,446 @@ const UNITS = [
       I am ___
       This is for you`
   },
+  {
+    id:'u7', title:'Unit 1 · Welcome back to school', term:'下册',
+    desc:'开学问候与国家',
+    words:[
+      {en:'boy', ipa:'/bɔɪ/', cn:'男孩'},
+      {en:'girl', ipa:'/ɡɜːrl/', cn:'女孩'},
+      {en:'teacher', ipa:'/ˈtiːtʃər/', cn:'老师'},
+      {en:'student', ipa:'/ˈstuːdnt/', cn:'学生'},
+      {en:'friend', ipa:'/frend/', cn:'朋友'},
+      {en:'China', ipa:'/ˈtʃaɪnə/', cn:'中国'},
+      {en:'the UK', ipa:'/ðə juː keɪ/', cn:'英国'},
+      {en:'the USA', ipa:'/ðə juː es eɪ/', cn:'美国'},
+      {en:'Canada', ipa:'/ˈkænədə/', cn:'加拿大'},
+      {en:'she', ipa:'/ʃiː/', cn:'她'},
+      {en:'he', ipa:'/hiː/', cn:'他'},
+      {en:'new', ipa:'/nuː/', cn:'新的'},
+      {en:'welcome', ipa:'/ˈwelkəm/', cn:'欢迎'},
+      {en:'and', ipa:'/ænd/', cn:'和'},
+      {en:'from', ipa:'/frʌm/', cn:'来自'},
+    ],
+    sentences:[
+      {en:'Welcome back to school!', cn:'欢迎回到学校！'},
+      {en:'I am from China.', cn:'我来自中国。'},
+      {en:'She is my friend.', cn:'她是我的朋友。'},
+      {en:'This is Amy. She is a new student.', cn:'这是艾米。她是新同学。'},
+      {en:'Nice to meet you.', cn:'很高兴认识你。'},
+    ],
+    dialogs:[
+      { title:"Let's talk", lines:[
+        {en:'Hi, I am Amy. I am from the UK.', cn:'嗨，我是艾米。我来自英国。'},
+        {en:'Hello, Amy. I am Chen Jie. I am from China.', cn:'你好，艾米。我叫陈杰，来自中国。'},
+        {en:'Nice to meet you!', cn:'很高兴认识你！'},
+      ]},
+    ],
+    chants:[
+      {en:'I am from China, you are from the UK.', cn:'我来自中国，你来自英国。'},
+      {en:'She is from Canada, he is from the USA.', cn:'她来自加拿大，他来自美国。'},
+    ],
+    spell:{
+      pattern:'字母组合 a-e',
+      words:[
+        {en:'name', ipa:'/neɪm/', cn:'名字'},
+        {en:'cake', ipa:'/keɪk/', cn:'蛋糕'},
+        {en:'face', ipa:'/feɪs/', cn:'脸'},
+        {en:'make', ipa:'/meɪk/', cn:'制作'},
+      ],
+      tip:'a-e 组合中的 a 通常发 /eɪ/，字母 e 不发音。',
+    },
+    story:{ title:'Story time', lines:[
+      {en:'Zoom: Hi, Zip! This is my friend, Amy.', cn:'祖姆：嗨，齐普！这是我的朋友，艾米。'},
+      {en:'Zip: Nice to meet you, Amy.', cn:'齐普：很高兴认识你，艾米。'},
+      {en:'Amy: Nice to meet you, too.', cn:'艾米：我也很高兴认识你。'},
+    ]},
+    mind:`mindmap
+  root((Unit 1 School))
+    People
+      boy
+      girl
+      teacher
+      student
+      friend
+    Countries
+      China
+      the UK
+      the USA
+      Canada
+    Pronouns
+      she
+      he
+    Sentence
+      I am from ___
+      She/He is my ___
+      Nice to meet you`
+  },
+  {
+    id:'u8', title:'Unit 2 · My family', term:'下册',
+    desc:'家庭成员',
+    words:[
+      {en:'father', ipa:'/ˈfɑːðər/', cn:'父亲'},
+      {en:'dad', ipa:'/dæd/', cn:'爸爸'},
+      {en:'mother', ipa:'/ˈmʌðər/', cn:'母亲'},
+      {en:'mom', ipa:'/mɑːm/', cn:'妈妈'},
+      {en:'man', ipa:'/mæn/', cn:'男人'},
+      {en:'woman', ipa:'/ˈwʊmən/', cn:'女人'},
+      {en:'grandfather', ipa:'/ˈɡrænfɑːðər/', cn:'（外）祖父'},
+      {en:'grandpa', ipa:'/ˈɡrænpɑː/', cn:'爷爷；外公'},
+      {en:'grandmother', ipa:'/ˈɡrænmʌðər/', cn:'（外）祖母'},
+      {en:'grandma', ipa:'/ˈɡrænmɑː/', cn:'奶奶；外婆'},
+      {en:'sister', ipa:'/ˈsɪstər/', cn:'姐妹'},
+      {en:'brother', ipa:'/ˈbrʌðər/', cn:'兄弟'},
+      {en:'family', ipa:'/ˈfæməli/', cn:'家庭'},
+    ],
+    sentences:[
+      {en:'This is my family.', cn:'这是我的家人。'},
+      {en:'This is my father.', cn:'这是我的爸爸。'},
+      {en:'She is my mother.', cn:'她是我的妈妈。'},
+      {en:'Who is that man?', cn:'那个男人是谁？'},
+      {en:'He is my grandpa.', cn:'他是我的爷爷。'},
+    ],
+    dialogs:[
+      { title:"Let's talk", lines:[
+        {en:'Look, this is my family.', cn:'看，这是我的家人。'},
+        {en:'Wow! Who is that man?', cn:'哇！那个男人是谁？'},
+        {en:'He is my father.', cn:'他是我的爸爸。'},
+        {en:'And who is that woman?', cn:'那个女人是谁？'},
+        {en:'She is my mother.', cn:'她是我的妈妈。'},
+      ]},
+    ],
+    chants:[
+      {en:'Father, mother, grandma, grandpa — I love my family!', cn:'爸爸、妈妈、奶奶、爷爷——我爱我的家人！'},
+    ],
+    spell:{
+      pattern:'字母组合 i-e',
+      words:[
+        {en:'kite', ipa:'/kaɪt/', cn:'风筝'},
+        {en:'bike', ipa:'/baɪk/', cn:'自行车'},
+        {en:'nice', ipa:'/naɪs/', cn:'好的'},
+        {en:'five', ipa:'/faɪv/', cn:'五'},
+      ],
+      tip:'i-e 组合中的 i 通常发 /aɪ/，字母 e 不发音。',
+    },
+    story:{ title:'Story time', lines:[
+      {en:'Look at my family photo.', cn:'看我的家庭照片。'},
+      {en:'This is my dad. He is tall.', cn:'这是我爸爸，他很高。'},
+      {en:'This is my mom. She is beautiful.', cn:'这是我妈妈，她很漂亮。'},
+      {en:'And this is me!', cn:'这是我！'},
+    ]},
+    mind:`mindmap
+  root((Unit 2 Family))
+    Parents
+      father / dad
+      mother / mom
+    Grandparents
+      grandfather / grandpa
+      grandmother / grandma
+    Siblings
+      sister
+      brother
+    Basic
+      man
+      woman
+      family
+    Sentence
+      This is my ___
+      Who is that ___?`
+  },
+  {
+    id:'u9', title:'Unit 3 · At the zoo', term:'下册',
+    desc:'动物外貌与形容词',
+    words:[
+      {en:'tall', ipa:'/tɔːl/', cn:'高的'},
+      {en:'short', ipa:'/ʃɔːrt/', cn:'矮的；短的'},
+      {en:'long', ipa:'/lɔːŋ/', cn:'长的'},
+      {en:'small', ipa:'/smɔːl/', cn:'小的'},
+      {en:'big', ipa:'/bɪɡ/', cn:'大的'},
+      {en:'giraffe', ipa:'/dʒəˈræf/', cn:'长颈鹿'},
+      {en:'deer', ipa:'/dɪr/', cn:'鹿'},
+      {en:'lion', ipa:'/ˈlaɪən/', cn:'狮子'},
+      {en:'fat', ipa:'/fæt/', cn:'胖的'},
+      {en:'thin', ipa:'/θɪn/', cn:'瘦的'},
+      {en:'tail', ipa:'/teɪl/', cn:'尾巴'},
+      {en:'so', ipa:'/soʊ/', cn:'如此；这么'},
+    ],
+    sentences:[
+      {en:'It is so tall!', cn:'它好高呀！'},
+      {en:'The giraffe is tall.', cn:'长颈鹿很高。'},
+      {en:'It has a long tail.', cn:'它有一条长尾巴。'},
+      {en:'Look at the elephant. It is fat.', cn:'看那头大象，它很胖。'},
+    ],
+    dialogs:[
+      { title:"Let's talk", lines:[
+        {en:'Look at the giraffe!', cn:'看那只长颈鹿！'},
+        {en:'It is so tall!', cn:'它好高呀！'},
+        {en:'And it has a long neck.', cn:'而且它的脖子好长。'},
+      ]},
+    ],
+    chants:[
+      {en:'Tall and short, long and small, big and thin — animals in the zoo!', cn:'高矮长短大小胖瘦——都在动物园里！'},
+    ],
+    spell:{
+      pattern:'字母组合 o-e',
+      words:[
+        {en:'nose', ipa:'/noʊz/', cn:'鼻子'},
+        {en:'rose', ipa:'/roʊz/', cn:'玫瑰'},
+        {en:'note', ipa:'/noʊt/', cn:'便签'},
+        {en:'home', ipa:'/hoʊm/', cn:'家'},
+      ],
+      tip:'o-e 组合中的 o 通常发 /oʊ/，字母 e 不发音。',
+    },
+    story:{ title:'Story time', lines:[
+      {en:'The zoo is fun.', cn:'动物园很有趣。'},
+      {en:'The giraffe is tall.', cn:'长颈鹿很高。'},
+      {en:'The rabbit is small.', cn:'兔子很小。'},
+      {en:'The elephant is big and fat.', cn:'大象又大又胖。'},
+    ]},
+    mind:`mindmap
+  root((Unit 3 Zoo))
+    Adjectives
+      tall / short
+      long / short
+      big / small
+      fat / thin
+    Animals
+      giraffe
+      deer
+      lion
+    Body
+      tail
+    Sentence
+      It is so ___
+      The ___ is ___
+      It has a ___`
+  },
+  {
+    id:'u10', title:'Unit 4 · Where is my car?', term:'下册',
+    desc:'方位介词与玩具',
+    words:[
+      {en:'on', ipa:'/ɑːn/', cn:'在……上'},
+      {en:'in', ipa:'/ɪn/', cn:'在……里'},
+      {en:'under', ipa:'/ˈʌndər/', cn:'在……下'},
+      {en:'chair', ipa:'/tʃer/', cn:'椅子'},
+      {en:'desk', ipa:'/desk/', cn:'书桌'},
+      {en:'car', ipa:'/kɑːr/', cn:'小汽车'},
+      {en:'boat', ipa:'/boʊt/', cn:'小船'},
+      {en:'ball', ipa:'/bɔːl/', cn:'球'},
+      {en:'map', ipa:'/mæp/', cn:'地图'},
+      {en:'toy', ipa:'/tɔɪ/', cn:'玩具'},
+      {en:'box', ipa:'/bɑːks/', cn:'盒子'},
+      {en:'plane', ipa:'/pleɪn/', cn:'飞机'},
+      {en:'where', ipa:'/wer/', cn:'在哪里'},
+      {en:'here', ipa:'/hɪr/', cn:'这里'},
+      {en:'there', ipa:'/ðer/', cn:'那里'},
+    ],
+    sentences:[
+      {en:'Where is my car?', cn:'我的小汽车在哪里？'},
+      {en:'It is on the desk.', cn:'在书桌上。'},
+      {en:'It is in the box.', cn:'在盒子里。'},
+      {en:'It is under the chair.', cn:'在椅子下面。'},
+      {en:'Here it is!', cn:'在这儿呢！'},
+    ],
+    dialogs:[
+      { title:"Let's talk", lines:[
+        {en:'Where is my car?', cn:'我的小汽车在哪里？'},
+        {en:'Look! It is under the chair.', cn:'看！在椅子下面。'},
+        {en:'Thank you!', cn:'谢谢！'},
+      ]},
+    ],
+    chants:[
+      {en:'On the desk, in the box, under the chair — where is my toy?', cn:'桌上、盒里、椅子下——我的玩具在哪里？'},
+    ],
+    spell:{
+      pattern:'字母组合 u-e',
+      words:[
+        {en:'cute', ipa:'/kjuːt/', cn:'可爱的'},
+        {en:'excuse', ipa:'/ɪkˈskjuːz/', cn:'原谅'},
+        {en:'use', ipa:'/juːz/', cn:'使用'},
+        {en:'huge', ipa:'/hjuːdʒ/', cn:'巨大的'},
+      ],
+      tip:'u-e 组合中的 u 通常发 /juː/ 或 /uː/，字母 e 不发音。',
+    },
+    story:{ title:'Story time', lines:[
+      {en:'Zoom cannot find his toy car.', cn:'祖姆找不到他的玩具车。'},
+      {en:'Zip: Where is your car?', cn:'齐普：你的车在哪里？'},
+      {en:'Zoom: I do not know. Oh! It is under the chair!', cn:'祖姆：我不知道。哦！在椅子下面！'},
+    ]},
+    mind:`mindmap
+  root((Unit 4 Where))
+    Prepositions
+      on
+      in
+      under
+    Places
+      chair
+      desk
+      box
+    Toys
+      car
+      boat
+      plane
+      ball
+      map
+      toy
+    Question
+      Where is my ___?
+      It is ___ the ___`
+  },
+  {
+    id:'u11', title:'Unit 5 · Do you like pears?', term:'下册',
+    desc:'水果',
+    words:[
+      {en:'pear', ipa:'/per/', cn:'梨'},
+      {en:'apple', ipa:'/ˈæpl/', cn:'苹果'},
+      {en:'banana', ipa:'/bəˈnænə/', cn:'香蕉'},
+      {en:'orange', ipa:'/ˈɔːrɪndʒ/', cn:'橙子'},
+      {en:'watermelon', ipa:'/ˈwɔːtərmelən/', cn:'西瓜'},
+      {en:'grape', ipa:'/ɡreɪp/', cn:'葡萄'},
+      {en:'strawberry', ipa:'/ˈstrɔːberi/', cn:'草莓'},
+      {en:'peach', ipa:'/piːtʃ/', cn:'桃子'},
+      {en:'like', ipa:'/laɪk/', cn:'喜欢'},
+      {en:'love', ipa:'/lʌv/', cn:'爱；非常喜欢'},
+      {en:'have', ipa:'/hæv/', cn:'有；吃'},
+      {en:'buy', ipa:'/baɪ/', cn:'买'},
+      {en:'thanks', ipa:'/θæŋks/', cn:'谢谢'},
+      {en:'sorry', ipa:'/ˈsɔːri/', cn:'对不起'},
+      {en:'sure', ipa:'/ʃʊr/', cn:'当然'},
+    ],
+    sentences:[
+      {en:'Do you like pears?', cn:'你喜欢梨吗？'},
+      {en:'Yes, I do.', cn:'是的，我喜欢。'},
+      {en:'No, I do not.', cn:'不，我不喜欢。'},
+      {en:'I like apples.', cn:'我喜欢苹果。'},
+      {en:'Have some grapes.', cn:'来点葡萄吧。'},
+      {en:'Let us buy some fruit.', cn:'我们买点水果吧。'},
+    ],
+    dialogs:[
+      { title:"Let's talk", lines:[
+        {en:'Do you like bananas?', cn:'你喜欢香蕉吗？'},
+        {en:'Yes, I do.', cn:'是的，我喜欢。'},
+        {en:'Have some, please.', cn:'请来点吧。'},
+        {en:'Thanks!', cn:'谢谢！'},
+      ]},
+    ],
+    chants:[
+      {en:'Apples, pears, oranges, grapes — fruits are yummy in my plate!', cn:'苹果、梨、橙子、葡萄——盘子里的水果真好吃！'},
+    ],
+    spell:{
+      pattern:'元音字母 e',
+      words:[
+        {en:'bed', ipa:'/bed/', cn:'床'},
+        {en:'red', ipa:'/red/', cn:'红色'},
+        {en:'leg', ipa:'/leɡ/', cn:'腿'},
+        {en:'pen', ipa:'/pen/', cn:'钢笔'},
+      ],
+      tip:'短元音 e 发 /e/。',
+    },
+    story:{ title:'Story time', lines:[
+      {en:'Mom: Do you like apples, dear?', cn:'妈妈：亲爱的，你喜欢苹果吗？'},
+      {en:'Child: Yes! I love apples.', cn:'孩子：喜欢！我爱苹果。'},
+      {en:'Mom: Have this red apple.', cn:'妈妈：吃这个红苹果吧。'},
+      {en:'Child: Thanks, Mom!', cn:'孩子：谢谢妈妈！'},
+    ]},
+    mind:`mindmap
+  root((Unit 5 Fruits))
+    Common
+      apple
+      pear
+      banana
+      orange
+    Big
+      watermelon
+    Small
+      grape
+      strawberry
+      peach
+    Sentence
+      Do you like ___?
+      Yes, I do
+      No, I do not
+      Have some ___`
+  },
+  {
+    id:'u12', title:'Unit 6 · How many?', term:'下册',
+    desc:'11-20 数字与物品数量',
+    words:[
+      {en:'eleven', ipa:'/ɪˈlevn/', cn:'十一'},
+      {en:'twelve', ipa:'/twelv/', cn:'十二'},
+      {en:'thirteen', ipa:'/ˌθɜːrˈtiːn/', cn:'十三'},
+      {en:'fourteen', ipa:'/ˌfɔːrˈtiːn/', cn:'十四'},
+      {en:'fifteen', ipa:'/ˌfɪfˈtiːn/', cn:'十五'},
+      {en:'sixteen', ipa:'/ˌsɪksˈtiːn/', cn:'十六'},
+      {en:'seventeen', ipa:'/ˌsevnˈtiːn/', cn:'十七'},
+      {en:'eighteen', ipa:'/ˌeɪˈtiːn/', cn:'十八'},
+      {en:'nineteen', ipa:'/ˌnaɪnˈtiːn/', cn:'十九'},
+      {en:'twenty', ipa:'/ˈtwenti/', cn:'二十'},
+      {en:'how many', ipa:'/haʊ ˈmeni/', cn:'多少（可数）'},
+      {en:'kite', ipa:'/kaɪt/', cn:'风筝'},
+      {en:'plane', ipa:'/pleɪn/', cn:'飞机'},
+      {en:'boat', ipa:'/boʊt/', cn:'小船'},
+      {en:'ball', ipa:'/bɔːl/', cn:'球'},
+      {en:'doll', ipa:'/dɑːl/', cn:'洋娃娃'},
+    ],
+    sentences:[
+      {en:'How many kites can you see?', cn:'你能看到多少只风筝？'},
+      {en:'I can see twelve.', cn:'我能看到 12 只。'},
+      {en:'How many pears do you have?', cn:'你有多少个梨？'},
+      {en:'I have fifteen.', cn:'我有 15 个。'},
+      {en:'Look at the beautiful kites!', cn:'看那些漂亮的风筝！'},
+    ],
+    dialogs:[
+      { title:"Let's talk", lines:[
+        {en:'How many kites can you see?', cn:'你能看到多少只风筝？'},
+        {en:'One, two, three… I can see twelve!', cn:'一、二、三……我能看到 12 只！'},
+        {en:'Wow, so many!', cn:'哇，好多呀！'},
+      ]},
+    ],
+    chants:[
+      {en:'Eleven, twelve, thirteen, fourteen, fifteen — high five!', cn:'十一、十二、十三、十四、十五——击掌！'},
+      {en:'Sixteen, seventeen, eighteen, nineteen, twenty — how many?', cn:'十六、十七、十八、十九、二十——多少个？'},
+    ],
+    spell:{
+      pattern:'字母组合 -ee-',
+      words:[
+        {en:'tree', ipa:'/triː/', cn:'树'},
+        {en:'bee', ipa:'/biː/', cn:'蜜蜂'},
+        {en:'see', ipa:'/siː/', cn:'看见'},
+        {en:'three', ipa:'/θriː/', cn:'三'},
+      ],
+      tip:'-ee- 组合发 /iː/（长音）。',
+    },
+    story:{ title:'Story time', lines:[
+      {en:'Zip: How many balloons?', cn:'齐普：多少个气球？'},
+      {en:'Zoom: One, two, three... eleven, twelve! Twelve balloons!', cn:'祖姆：一、二、三……十一、十二！十二个气球！'},
+      {en:'Zip: Great! Let us play.', cn:'齐普：太棒了！我们玩吧。'},
+    ]},
+    mind:`mindmap
+  root((Unit 6 Numbers))
+    11-15
+      eleven
+      twelve
+      thirteen
+      fourteen
+      fifteen
+    16-20
+      sixteen
+      seventeen
+      eighteen
+      nineteen
+      twenty
+    Objects
+      kite
+      plane
+      boat
+      ball
+      doll
+    Sentence
+      How many ___ can you see?
+      I can see ___
+      How many ___ do you have?`
+  },
+
 ];
 // ============ 题目生成器（4 种题型） ============
 function makeQuestion(unit, level) {
@@ -414,7 +865,7 @@ function makeQuestion(unit, level) {
 
 // ============ SPA 状态 & 路由 ============
 const app = document.getElementById('app');
-let state = { view:'home', uid:null, mode:'practice', stage:1, index:0, total:10, current:null, right:0, wrong:0, currentWrongs:[] };
+let state = { view:'home', term:'全部', uid:null, mode:'practice', stage:1, index:0, total:10, current:null, right:0, wrong:0, currentWrongs:[] };
 
 function nav(view, extra={}) {
   Object.assign(state, extra, { view });
@@ -448,6 +899,8 @@ function bindVoiceBar() {
 function renderHome() {
   let totalStars = 0, wrongTotal = 0;
   for (const u of UNITS) { const r = store.getUnit(u.id); totalStars += r.stars; wrongTotal += (r.wrongList||[]).length; }
+  const terms = ['全部','上册','下册'];
+  const list = state.term === '全部' ? UNITS : UNITS.filter(u => u.term === state.term);
   app.innerHTML = `
     ${voiceBar()}
     <div class="summary">
@@ -456,8 +909,11 @@ function renderHome() {
       <div class="s-item"><div class="s-num">${UNITS.length}</div><div class="s-lbl">📚 单元</div></div>
       <button class="ghost sm" id="reset">🗑️ 清空进度</button>
     </div>
+    <div class="tabs" style="display:flex;gap:8px;margin:8px 0">
+      ${terms.map(t => `<button class="${t===state.term?'active':''}" data-term="${t}" style="padding:6px 14px;border:1px solid var(--line);background:${t===state.term?'var(--brand)':'var(--card)'};color:${t===state.term?'#fff':'inherit'};border-radius:999px;cursor:pointer;font-size:14px">${t}</button>`).join('')}
+    </div>
     <div class="grid">
-      ${UNITS.map(u => {
+      ${list.map(u => {
         const r = store.getUnit(u.id);
         return `<div class="card" data-id="${u.id}">
           <div class="badge">${u.words.length} 个词 · ${u.sentences.length} 个句</div>
@@ -469,6 +925,7 @@ function renderHome() {
     </div>
   `;
   bindVoiceBar();
+  app.querySelectorAll('.tabs button').forEach(b => b.onclick = () => nav('home', { term: b.dataset.term }));
   app.querySelectorAll('.card').forEach(el => el.onclick = () => nav('unit', { uid: el.dataset.id }));
   document.getElementById('reset').onclick = () => { if (confirm('确定清空所有星星和错词？')) { store.reset(); render(); } };
 }
@@ -517,6 +974,68 @@ function renderUnit() {
         `).join('')}
       </div>
     </div>
+    ${ (u.dialogs && u.dialogs.length) ? u.dialogs.map(d => `
+    <div class="panel">
+      <h3 style="margin-top:0">🗣️ ${d.title || "Let's talk"}</h3>
+      <div class="sent-list">
+        ${d.lines.map(l => `
+          <div class="sent" data-en="${l.en}">
+            <div>
+              <div class="en">${l.en}</div>
+              <div class="cn">${l.cn}</div>
+            </div>
+            <span class="spk">🔊</span>
+          </div>
+        `).join('')}
+      </div>
+      <div style="margin-top:8px"><button class="ghost" data-play-all='${JSON.stringify(d.lines.map(x=>x.en)).replace(/'/g,"&#39;")}'>▶️ 连续朗读整段</button></div>
+    </div>`).join('') : '' }
+    ${ (u.chants && u.chants.length) ? `
+    <div class="panel">
+      <h3 style="margin-top:0">🎵 Chant · 韵律歌谣（点击朗读）</h3>
+      <div class="sent-list">
+        ${u.chants.map(l => `
+          <div class="sent" data-en="${l.en}">
+            <div>
+              <div class="en">${l.en}</div>
+              <div class="cn">${l.cn}</div>
+            </div>
+            <span class="spk">🔊</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : '' }
+    ${ u.spell ? `
+    <div class="panel">
+      <h3 style="margin-top:0">🔠 Let's spell · ${u.spell.pattern}</h3>
+      <p style="color:var(--muted);margin:0 0 10px">${u.spell.tip}</p>
+      <div class="word-grid">
+        ${u.spell.words.map(w => `
+          <div class="word" data-en="${w.en}">
+            <span class="speaker">🔊</span>
+            <div class="en">${w.en}</div>
+            <div class="ipa">${w.ipa}</div>
+            <div class="cn">${w.cn}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : '' }
+    ${ u.story ? `
+    <div class="panel">
+      <h3 style="margin-top:0">📖 ${u.story.title || 'Story time'}（点击朗读）</h3>
+      <div class="sent-list">
+        ${u.story.lines.map(l => `
+          <div class="sent" data-en="${l.en}">
+            <div>
+              <div class="en">${l.en}</div>
+              <div class="cn">${l.cn}</div>
+            </div>
+            <span class="spk">🔊</span>
+          </div>
+        `).join('')}
+      </div>
+      <div style="margin-top:8px"><button class="ghost" data-play-all='${JSON.stringify(u.story.lines.map(x=>x.en)).replace(/'/g,"&#39;")}'>▶️ 从头连读故事</button></div>
+    </div>` : '' }
     <div class="panel">
       <h3 style="margin-top:0">🎯 开始学习</h3>
       <div class="row">
@@ -531,6 +1050,12 @@ function renderUnit() {
   document.getElementById('back').onclick = () => nav('home');
   app.querySelectorAll('.word').forEach(el => el.onclick = () => tts.speak(el.dataset.en));
   app.querySelectorAll('.sent').forEach(el => el.onclick = () => tts.speak(el.dataset.en));
+  app.querySelectorAll('[data-play-all]').forEach(btn => btn.onclick = () => {
+    try {
+      const arr = JSON.parse(btn.getAttribute('data-play-all').replace(/&#39;/g, "'"));
+      tts.speakSeq(arr);
+    } catch(e){ console.warn(e); }
+  });
   document.getElementById('practice').onclick = () => nav('quiz', { mode:'practice', total:10, index:0, right:0, wrong:0, current:null, currentWrongs:[] });
   document.getElementById('stage').onclick = () => nav('stage-select');
   const wb = document.getElementById('wrong');
