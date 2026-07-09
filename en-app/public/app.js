@@ -10,17 +10,26 @@ const tts = {
   voices: [],
   pref: null,
   rate: 0.9,
+  supported: ('speechSynthesis' in window),
   init() {
+    if (!this.supported) return;
     const load = () => {
-      this.voices = (speechSynthesis.getVoices() || []).filter(v => /en(-|_|$)/i.test(v.lang));
+      const all = speechSynthesis.getVoices() || [];
+      // 英文语音排前，中文/其它排后，便于家长看
+      this.voices = all.slice().sort((a,b) => {
+        const ea = /^en/i.test(a.lang) ? 0 : 1;
+        const eb = /^en/i.test(b.lang) ? 0 : 1;
+        if (ea !== eb) return ea - eb;
+        return a.lang.localeCompare(b.lang);
+      });
       const saved = localStorage.getItem('g3en.voice');
       if (saved) this.pref = this.voices.find(v => v.voiceURI === saved) || null;
       if (!this.pref) {
-        // 尝试挑一个英美语音，女声优先
-        this.pref = this.voices.find(v => /en-US/i.test(v.lang) && /female|zira|samantha/i.test(v.name))
+        this.pref = this.voices.find(v => /en-US/i.test(v.lang) && /female|zira|samantha|google/i.test(v.name))
                  || this.voices.find(v => /en-US/i.test(v.lang))
                  || this.voices.find(v => /en-GB/i.test(v.lang))
-                 || this.voices[0] || null;
+                 || this.voices.find(v => /^en/i.test(v.lang))
+                 || null; // 没英文语音就交给浏览器默认
       }
     };
     load();
@@ -31,7 +40,10 @@ const tts = {
     if (savedRate >= 0.5 && savedRate <= 1.5) this.rate = savedRate;
   },
   speak(text) {
-    if (!('speechSynthesis' in window)) return;
+    if (!this.supported) {
+      window.__ttsWarn && window.__ttsWarn('当前浏览器不支持语音合成，请换 Chrome / Edge / Safari 再试。');
+      return;
+    }
     try {
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
@@ -39,8 +51,15 @@ const tts = {
       u.pitch = 1;
       if (this.pref) u.voice = this.pref;
       u.lang = (this.pref && this.pref.lang) || 'en-US';
+      u.onerror = (e) => window.__ttsWarn && window.__ttsWarn('播放失败：' + (e.error || 'unknown'));
       speechSynthesis.speak(u);
-    } catch (e) { console.warn('tts fail', e); }
+      // iOS/Safari 有时首次调用会静默失败，简单检测：500ms 后没在说话就提示
+      setTimeout(() => {
+        if (!speechSynthesis.speaking && !speechSynthesis.pending) {
+          window.__ttsWarn && window.__ttsWarn('没有听到声音？请检查系统音量，或换 Chrome/Edge 浏览器（顶部下拉选择英文语音）。');
+        }
+      }, 800);
+    } catch (e) { console.warn('tts fail', e); window.__ttsWarn && window.__ttsWarn('语音失败：'+e.message); }
   },
   setVoice(uri) {
     const v = this.voices.find(x => x.voiceURI === uri);
@@ -896,6 +915,32 @@ function bindVoiceBar() {
 }
 
 // ============ 首页 ============
+// 全局 toast
+window.__ttsWarn = (msg) => {
+  let el = document.getElementById('tts-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'tts-toast';
+    el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#ef4444;color:#fff;padding:10px 16px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:9999;font-size:14px;max-width:90vw;text-align:center';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(window.__ttsWarnT);
+  window.__ttsWarnT = setTimeout(() => { el.style.display = 'none'; }, 5000);
+};
+
+function ttsStatusBanner() {
+  if (!tts.supported) {
+    return '<div class="panel" style="background:rgba(239,68,68,.12);color:#ef4444"><b>⚠ 当前浏览器不支持语音朗读</b><br/>请换 Chrome / Edge / Safari 打开本页。</div>';
+  }
+  const hasEn = tts.voices.some(v => /^en/i.test(v.lang));
+  if (!hasEn) {
+    return '<div class="panel" style="background:rgba(245,158,11,.12);color:#a15c00"><b>⚠ 系统没有英文语音</b>——朗读可能用中文引擎读英语，发音不准。<br/>Windows 10/11 解决方法：<b>设置 → 时间和语言 → 语音 → 添加语音 → English</b>。装完刷新页面即可。</div>';
+  }
+  return '';
+}
+
 function renderHome() {
   let totalStars = 0, wrongTotal = 0;
   for (const u of UNITS) { const r = store.getUnit(u.id); totalStars += r.stars; wrongTotal += (r.wrongList||[]).length; }
@@ -903,6 +948,7 @@ function renderHome() {
   const list = state.term === '全部' ? UNITS : UNITS.filter(u => u.term === state.term);
   app.innerHTML = `
     ${voiceBar()}
+    ${ttsStatusBanner()}
     <div class="summary">
       <div class="s-item"><div class="s-num">${totalStars}</div><div class="s-lbl">⭐ 星星</div></div>
       <div class="s-item"><div class="s-num">${wrongTotal}</div><div class="s-lbl">📕 错词</div></div>
