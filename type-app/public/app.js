@@ -38,6 +38,24 @@ const store = {
   reset(){ localStorage.removeItem(this.ns); }
 };
 
+
+// ===== 打卡（服务端持久化） =====
+const APP_ID = 'type';
+const ENDPOINT = '/api/checkin';
+async function doCheckin() {
+  try {
+    const uid = CheckIn.getUid();
+    const data = await CheckIn.checkin(ENDPOINT, uid, APP_ID);
+    return data;
+  } catch(e) { console.warn('checkin failed', e); return null; }
+}
+async function loadCheckin() {
+  try {
+    const uid = CheckIn.getUid();
+    return await CheckIn.fetchData(ENDPOINT, uid);
+  } catch(e) { return null; }
+}
+
 const rnd = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const pick = a=>a[Math.floor(Math.random()*a.length)];
 const shuffle = a=>{ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
@@ -94,6 +112,7 @@ function renderHome() {
     <div class="summary">
       <div class="s-item"><div class="s-num">${totalStars}</div><div class="s-lbl">⭐ 星星</div></div>
       <div class="s-item"><div class="s-num">${store.meteorBest()}</div><div class="s-lbl">☄️ 最高分</div></div>
+      <button class="ghost sm" id="checkin" style="margin-left:auto">📅 每日打卡</button>
       <button class="ghost sm" id="reset">🗑️ 清空进度</button>
     </div>
     <div class="mode-grid">
@@ -113,6 +132,7 @@ function renderHome() {
       </ul>
     </div>`;
   app.querySelectorAll('.mode-card').forEach(el => el.onclick = () => nav(el.dataset.view));
+  document.getElementById('checkin').onclick = () => nav('checkin');
   document.getElementById('reset').onclick = () => { if (confirm('确定清空全部进度和最高分吗？')) { store.reset(); render(); } };
 }
 
@@ -281,6 +301,7 @@ function runTyping(cfg) {
     if (acc >= 95 && wpm >= 15) stars = 3;
     sfx.win(); firework();
     cfg.onDone && cfg.onDone({ wpm, acc, stars, right, wrong });
+    doCheckin();
     app0.innerHTML = `
       <div class="panel result">
         <div class="big">${stars===3?'🏆':(stars===2?'🥈':(stars===1?'🥉':'💪'))}</div>
@@ -532,6 +553,7 @@ function renderMeteor() {
 function render() {
   const m = {
     home: renderHome,
+    'checkin': renderCheckin,
     'key-select': renderKeySelect, 'key-run': renderKeyRun,
     'pin-select': renderPinSelect, 'pin-run': renderPinRun,
     'sent-select': renderSentSelect, 'sent-run': renderSentRun,
@@ -540,3 +562,137 @@ function render() {
   (m[state.view] || renderHome)();
 }
 render();
+
+
+// ===== 打卡页 =====
+async function renderCheckin() {
+  app.innerHTML = `
+    <a class="back" id="back">← 返回首页</a>
+    <div class="panel">
+      <h2 style="margin:0 0 4px">📅 每日打卡</h2>
+      <p style="color:var(--muted);margin:0">来一次学习就自动打卡。数据存在服务端，换设备也能同步 👇</p>
+    </div>
+    <div class="panel" id="loading">正在从云端拉取你的打卡记录…</div>
+  `;
+  document.getElementById('back').onclick = () => nav('home');
+
+  const uid = CheckIn.getUid();
+  const data = await loadCheckin();
+  if (!data) {
+    document.getElementById('loading').innerHTML = '❌ 加载失败，检查网络后重试。<br><button class="primary" id="retry" style="margin-top:10px">🔄 重试</button>';
+    document.getElementById('retry').onclick = () => renderCheckin();
+    return;
+  }
+
+  const today = new Date();
+  const y = today.getFullYear(), m = today.getMonth();
+  const first = new Date(y, m, 1);
+  const startDow = first.getDay(); // 0=Sun
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const prevDays = new Date(y, m, 0).getDate();
+  const cells = [];
+  // 上月填补
+  for (let i = startDow-1; i >= 0; i--) cells.push({ d: prevDays-i, other: true });
+  for (let d = 1; d <= daysInMonth; d++) cells.push({ d, y, m });
+  while (cells.length % 7) cells.push({ d: cells.length - daysInMonth - startDow + 1, other: true });
+
+  const doneMap = data.days || {};
+  const monthPad = (n) => String(n).padStart(2,'0');
+  const todayStr = `${y}-${monthPad(m+1)}-${monthPad(today.getDate())}`;
+  const isDone = (c) => !c.other && !!doneMap[`${c.y}-${monthPad(c.m+1)}-${monthPad(c.d)}`];
+
+  const dowLabels = ['日','一','二','三','四','五','六'];
+  const monthLabel = `${y} 年 ${m+1} 月`;
+  const alreadyToday = !!doneMap[todayStr];
+
+  document.getElementById('loading').outerHTML = `
+    <div class="panel">
+      <div class="streak-big">
+        <div class="num">${data.streak||0}</div>
+        <div class="lbl">🔥 连续打卡天数（历史最长 ${data.longest||0} 天）</div>
+      </div>
+      <div class="hud" style="justify-content:center">
+        <div class="b">总打卡 <b>${data.total||0}</b> 天</div>
+        <div class="b">本月完成 <b>${cells.filter(c=>!c.other && isDone(c)).length}</b> 天</div>
+        <div class="b">今日 <b>${alreadyToday?'✅ 已打卡':'⏳ 未打卡'}</b></div>
+      </div>
+      ${!alreadyToday ? '<div style="text-align:center;margin-top:12px"><button class="primary" id="do-checkin">📌 立即打卡</button></div>' : ''}
+      ${alreadyToday ? '<p style="text-align:center;color:var(--muted);font-size:13px;margin:10px 0 0">💡 继续做练习/闯关会自动累加当日次数</p>' : ''}
+    </div>
+
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <h3 style="margin:0">${monthLabel}</h3>
+        <div style="color:var(--muted);font-size:13px">🟩 = 已打卡</div>
+      </div>
+      <div class="cal">
+        ${dowLabels.map(x=>`<div class="dow">${x}</div>`).join('')}
+        ${cells.map(c => {
+          const done = isDone(c);
+          const isToday = !c.other && `${c.y}-${monthPad(c.m+1)}-${monthPad(c.d)}` === todayStr;
+          const dateKey = c.other?null:`${c.y}-${monthPad(c.m+1)}-${monthPad(c.d)}`;
+          const day = dateKey && doneMap[dateKey];
+          const totalToday = day ? Object.values(day.apps||{}).reduce((a,b)=>a+b,0) : 0;
+          return `<div class="day ${c.other?'other':''} ${done?'done':''} ${isToday?'today':''}" title="${dateKey||''}${totalToday?'  完成 '+totalToday+' 次':''}">
+            ${c.d}${totalToday>0?`<span class="dot">${totalToday>9?'9+':totalToday}</span>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">🔗 换设备同步</h3>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 8px">这是你的<b>专属同步码</b>，在另一台设备上"输入同步码"即可继续用同一份数据。</p>
+      <div class="uid-box">
+        <code id="uid-code">${uid}</code>
+        <button class="ghost sm" id="copy-uid">📋 复制</button>
+        <button class="ghost sm" id="show-qr">📱 显示二维码</button>
+      </div>
+      <div class="qr-box" id="qr" style="display:none"></div>
+      <div style="margin-top:14px">
+        <label style="font-size:13px;color:var(--muted)">在这台新设备输入你原有的同步码：</label>
+        <div class="row" style="margin-top:6px">
+          <input id="new-uid" type="text" placeholder="粘贴同步码" autocomplete="off" style="padding:10px;border:1px solid var(--line);border-radius:8px;background:transparent;color:inherit;flex:1;min-width:200px" />
+          <button class="primary" id="apply-uid">应用</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const dc = document.getElementById('do-checkin');
+  if (dc) dc.onclick = async () => {
+    dc.disabled = true; dc.textContent = '打卡中…';
+    await doCheckin();
+    firework();
+    renderCheckin();
+  };
+
+  document.getElementById('copy-uid').onclick = async () => {
+    try { await navigator.clipboard.writeText(uid); alert('已复制！'); } catch { alert('请手动选中复制'); }
+  };
+  document.getElementById('show-qr').onclick = () => {
+    const box = document.getElementById('qr');
+    if (box.style.display !== 'none' && box.innerHTML) { box.style.display='none'; box.innerHTML=''; return; }
+    box.style.display = '';
+    // 简单方案：用 quickchart.io 生成二维码（也可换成本地库）
+    const url = `${location.origin}${location.pathname}#uid=${uid}`;
+    const src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=200x200`;
+    box.innerHTML = `<img src="${src}" alt="uid QR" width="200" height="200"><div style="color:var(--muted);font-size:12px;margin-top:6px">扫码后打开链接即可自动同步</div>`;
+  };
+  document.getElementById('apply-uid').onclick = () => {
+    const v = document.getElementById('new-uid').value.trim();
+    try {
+      CheckIn.setUid(v);
+      alert('已切换到同步码：' + v);
+      renderCheckin();
+    } catch(e) { alert('同步码格式不对，应为 6-32 位字母数字'); }
+  };
+}
+
+// 支持 URL hash #uid=xxx 一键切换
+(function(){
+  const m = location.hash.match(/uid=([a-zA-Z0-9_-]{6,32})/);
+  if (m) {
+    try { CheckIn.setUid(m[1]); location.hash = ''; } catch(e){}
+  }
+})();

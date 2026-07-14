@@ -141,7 +141,7 @@ def upload_assets(cf: CloudflareClient, account_id: str, script_name: str, asset
 def upload_script(cf: CloudflareClient, account_id: str, script_name: str,
                   script_path: Path, assets_jwt: str | None,
                   ai_binding: str = "AI", assets_binding: str = "ASSETS",
-                  spa: bool = True) -> None:
+                  spa: bool = True, kv_bindings: list | None = None) -> None:
     metadata = {
         "main_module": script_path.name,
         "compatibility_date": "2025-01-01",
@@ -153,6 +153,10 @@ def upload_script(cf: CloudflareClient, account_id: str, script_name: str,
             assets_conf["jwt"] = assets_jwt
         metadata["assets"] = assets_conf
         metadata["bindings"].append({"type": "assets", "name": assets_binding})
+
+    for kv in (kv_bindings or []):
+        # kv 形如 {"name":"CHECKIN","namespace_id":"xxxxx"}
+        metadata["bindings"].append({"type": "kv_namespace", "name": kv["name"], "namespace_id": kv["namespace_id"]})
 
     boundary = "----cfWorkerBoundary" + str(int(time.time()))
     parts: list[bytes] = []
@@ -216,6 +220,7 @@ def main() -> int:
     ap.add_argument("--domain", help="要绑定的自定义域名，例如 chat.idai.asia")
     ap.add_argument("--only-domain", action="store_true", help="只重绑域名，不重新上传代码")
     ap.add_argument("--no-spa", action="store_true", help="关闭 SPA 回退（默认开启）")
+    ap.add_argument("--kv", action="append", default=[], help="KV 绑定，形如 CHECKIN=xxxxxxxxnamespace_id；可多次")
     args = ap.parse_args()
 
     cf = CloudflareClient.from_env(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
@@ -229,7 +234,12 @@ def main() -> int:
         assets_jwt = None
         if args.assets:
             assets_jwt = upload_assets(cf, account_id, args.name, Path(args.assets).resolve())
-        upload_script(cf, account_id, args.name, script_path, assets_jwt, spa=not args.no_spa)
+        kvs = []
+        for k in args.kv:
+            if "=" not in k: raise SystemExit(f"--kv 格式错误: {k}, 应为 NAME=namespace_id")
+            n, i = k.split("=", 1)
+            kvs.append({"name": n.strip(), "namespace_id": i.strip()})
+        upload_script(cf, account_id, args.name, script_path, assets_jwt, spa=not args.no_spa, kv_bindings=kvs)
 
     if args.domain:
         bind_custom_domain(cf, account_id, args.name, args.domain)
