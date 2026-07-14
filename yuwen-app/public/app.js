@@ -104,8 +104,18 @@ const store = {
 const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
 const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
 const shuffle = (a) => { a=a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
-const norm = (s) => String(s).trim().replace(/\s+/g,'');
+const norm = (s) => String(s).trim().toLowerCase().replace(/\s+/g,'');
 const same = (a,b) => norm(a) === norm(b);
+// 去声调（含数字调号）用于宽容匹配
+const stripTone = (s) => {
+  const map = {'ā':'a','á':'a','ǎ':'a','à':'a','ē':'e','é':'e','ě':'e','è':'e','ī':'i','í':'i','ǐ':'i','ì':'i','ō':'o','ó':'o','ǒ':'o','ò':'o','ū':'u','ú':'u','ǔ':'u','ù':'u','ǖ':'u','ǘ':'u','ǚ':'u','ǜ':'u','ü':'u','v':'u'};
+  return norm(s).replace(/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜüv]/g, ch => map[ch] || ch).replace(/[1-5]/g,'');
+};
+const samePinyin = (a,b) => {
+  if (same(a,b)) return { ok:true, exact:true };
+  if (stripTone(a) === stripTone(b)) return { ok:true, exact:false };
+  return { ok:false, exact:false };
+};
 
 // ============ 通关烟花 ============
 function firework() {
@@ -637,7 +647,7 @@ function renderQuiz() {
   if (q.type === 'choice') {
     inputHtml = `<div class="options" id="options">${q.options.map(o=>`<button data-opt="${o}">${o}</button>`).join('')}</div>`;
   } else {
-    inputHtml = `<div class="row" style="justify-content:center"><input id="ans" type="text" placeholder="输入答案" autocomplete="off" /><button class="primary" id="submit">提交</button></div><p class="hint">💡 拼音可用 hao3 这种数字调号，也可直接输入 hǎo</p>`;
+    inputHtml = `<div class="row" style="justify-content:center"><input id="ans" type="text" placeholder="输入答案（英文/数字）" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="latin" lang="en" /><button class="primary" id="submit">提交</button></div><p class="hint">💡 拼音示例：<b>da</b>（不带调号也算对）· <b>da3</b>（数字调号）· <b>dǎ</b>（带调号）。请切到<b>英文输入法</b>输入。</p>`;
   }
   app.innerHTML = `
     <a class="back" id="back">← 退出</a>
@@ -656,7 +666,7 @@ function renderQuiz() {
   app.querySelectorAll('[data-play]').forEach(el => el.onclick = (e) => { e.stopPropagation(); tts.speak(el.dataset.play); });
   if (q.autoPlay) setTimeout(() => tts.speak(q.autoPlay), 200);
 
-  const showFeedback = (ok, user) => {
+  const showFeedback = (ok, user, toneWarn) => {
     state.answered = true;
     if (ok) state.right++;
     else {
@@ -668,7 +678,7 @@ function renderQuiz() {
     if (ok && q.target && q.target.han && q.target.han.length <= 8) tts.speak(q.target.han);
     const fb = document.getElementById('fb');
     fb.innerHTML = `<div class="feedback ${ok?'ok':'bad'}">
-      ${ok ? `✅ 正确！<b>${q.target.han}</b> ${q.target.pinyin?'· '+q.target.pinyin:''} ${q.target.meaning?'· '+q.target.meaning:''}`
+      ${ok ? `✅ 正确！<b>${q.target.han}</b> ${q.target.pinyin?'· '+q.target.pinyin:''} ${q.target.meaning?'· '+q.target.meaning:''}${toneWarn?'<div style="font-size:13px;color:var(--muted);margin-top:4px">💡 读音对啦，标准拼音是 <b>'+q.answer+'</b>（注意声调哦）</div>':''}`
            : `❌ 正确答案：<b>${q.answer}</b>${user!==undefined?`（你的：${user}）`:''}`}
       <div style="margin-top:8px"><button class="primary" id="next">${state.index+1<state.total?'下一题 →':'查看结果'}</button></div>
     </div>`;
@@ -691,8 +701,19 @@ function renderQuiz() {
       if (state.answered) return;
       const val = document.getElementById('ans').value;
       if (!val) return;
-      const ok = same(val, q.answer) || (q.altAnswer && same(val, q.altAnswer));
-      showFeedback(ok, val);
+      // 拼音题宽容匹配：无调号 / 数字调号 / 带调号都可
+      const answerStr = String(q.answer||'');
+      const isPinyin = /^[a-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü1-5v]+$/i.test(answerStr);
+      let ok=false, toneWarn=false;
+      if (isPinyin) {
+        const r1 = samePinyin(val, q.answer);
+        const r2 = q.altAnswer ? samePinyin(val, q.altAnswer) : {ok:false,exact:false};
+        ok = r1.ok || r2.ok;
+        toneWarn = ok && !(r1.exact || r2.exact);
+      } else {
+        ok = same(val, q.answer) || (q.altAnswer && same(val, q.altAnswer));
+      }
+      showFeedback(ok, val, toneWarn);
     };
     document.getElementById('submit').onclick = submit;
     const inp = document.getElementById('ans');
