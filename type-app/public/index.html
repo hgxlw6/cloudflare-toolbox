@@ -1,0 +1,125 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>快乐打字 · 小学二三年级</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>⌨️</text></svg>" />
+<style>
+  :root { color-scheme: light dark;
+    --brand:#2563eb; --acc:#f59e0b; --ok:#22c55e; --bad:#ef4444; --star:#f59e0b;
+    --bg:#eff6ff; --card:#fff; --line:rgba(0,0,0,.08); --text:#0f172a; --muted:#64748b; --key:#fff; --key-b:#cbd5e1; --key-a:#fde68a; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0b1220; --card:#111a2e; --line:rgba(255,255,255,.1); --text:#e2e8f0; --muted:#94a3b8; --key:#1e293b; --key-b:#334155; --key-a:#78350f; } }
+  * { box-sizing: border-box; }
+  html,body { margin:0; padding:0; }
+  body { font-family: system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  header { padding: 18px 16px 6px; text-align:center; }
+  header h1 { margin:0 0 4px; font-size:24px; letter-spacing:2px; }
+  header p { margin:0; color:var(--muted); font-size:13px; }
+  main { max-width: 960px; margin: 0 auto; padding: 6px 16px 60px; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin: 10px 0; box-shadow:0 3px 10px rgba(0,0,0,.04); }
+  .badge { display:inline-block; background:var(--brand); color:#fff; padding:3px 10px; border-radius:999px; font-size:12px; letter-spacing:1px; }
+  .summary { display:flex; gap:8px; padding:10px 4px; flex-wrap:wrap; align-items:center; }
+  .s-item { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 14px; min-width:82px; text-align:center; }
+  .s-num { font-size:22px; font-weight:700; color:var(--brand); line-height:1.2; }
+  .s-lbl { font-size:11px; color:var(--muted); margin-top:2px; }
+  .ghost.sm { padding:6px 12px; font-size:12px; margin-left:auto; }
+
+  .mode-grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+  .mode-card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; cursor:pointer; transition: transform .12s, box-shadow .12s; }
+  .mode-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(37,99,235,.15); }
+  .mode-card .emoji { font-size:38px; line-height:1; margin-bottom:6px; }
+  .mode-card h3 { margin:4px 0 4px; font-size:18px; }
+  .mode-card p { margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
+
+  .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; cursor:pointer; transition:transform .12s, box-shadow .12s; position:relative; }
+  .card:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+  .card h4 { margin:6px 0 4px; font-size:16px; }
+  .card .desc { color:var(--muted); font-size:12px; }
+  .card .stars { color:var(--star); margin-top:6px; font-size:16px; letter-spacing:2px; }
+  .locked { opacity:.5; cursor:not-allowed; }
+  .card .lock { position:absolute; top:8px; right:10px; }
+
+  .tabs { display:flex; gap:8px; margin:8px 0 12px; overflow-x:auto; padding-bottom:4px; }
+  .tabs button { flex:0 0 auto; padding:8px 14px; border:1px solid var(--line); background:var(--card); color:inherit; border-radius:999px; cursor:pointer; font-size:14px; }
+  .tabs button.active { background:var(--brand); color:#fff; border-color:transparent; }
+
+  .back { display:inline-block; margin:6px 0 4px; color:var(--brand); cursor:pointer; font-size:14px; }
+
+  /* 打字场 */
+  .stage { padding: 22px 18px; background:var(--card); border:1px solid var(--line); border-radius:16px; margin: 10px 0; }
+  .target { font-size: 44px; letter-spacing: 6px; text-align:center; line-height:1.5; min-height: 70px; font-family: "Consolas","Menlo",monospace; word-break: break-word; }
+  .target .ch { display:inline-block; padding: 0 3px; border-radius: 6px; transition: all .18s; }
+  .target .ch.done { color: var(--muted); opacity:.55; }
+  .target .ch.cur { background: var(--brand); color:#fff; transform: scale(1.15); box-shadow: 0 4px 14px rgba(37,99,235,.4); }
+  .target .ch.bad { background: var(--bad); color:#fff; animation: nope .3s; }
+  @keyframes nope { 0%,100% { transform: scale(1.15) translateX(0) } 25% { transform: scale(1.15) translateX(-6px) } 75% { transform: scale(1.15) translateX(6px) } }
+
+  .hud { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top: 12px; }
+  .hud .b { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:6px 12px; font-size:14px; }
+  .hud .b b { color: var(--brand); font-size:16px; }
+  .progress { height: 8px; background: var(--line); border-radius: 999px; overflow:hidden; margin: 10px 0 4px; }
+  .progress > i { display:block; height:100%; background: linear-gradient(90deg, var(--brand), var(--acc)); width: 0%; transition: width .18s ease; }
+
+  /* 虚拟键盘 */
+  .kbd { margin: 16px 0 4px; display:flex; flex-direction:column; gap:6px; align-items:center; }
+  .kbd .row { display:flex; gap:6px; }
+  .kbd .k { min-width: 42px; height: 42px; padding: 0 8px; border-radius: 8px; background: var(--key); border: 1px solid var(--key-b); border-bottom-width: 3px; display:inline-flex; align-items:center; justify-content:center; font-family:"Consolas",monospace; font-size:16px; color:var(--text); }
+  .kbd .k.wide { min-width: 68px; }
+  .kbd .k.space { min-width: 260px; }
+  .kbd .k.hot { background: var(--key-a); border-color: var(--acc); box-shadow: 0 0 0 3px rgba(245,158,11,.4); }
+  .kbd .k.hit { background: var(--brand); color:#fff; border-color: transparent; transform: translateY(2px); }
+  .kbd .k.finger-1 { border-color:#f87171 } /* 小 */
+  .kbd .k.finger-2 { border-color:#fb923c } /* 无名 */
+  .kbd .k.finger-3 { border-color:#facc15 } /* 中 */
+  .kbd .k.finger-4 { border-color:#4ade80 } /* 食 */
+  .kbd .k.finger-5 { border-color:#38bdf8 } /* 拇 */
+
+  /* 手指示意 */
+  .hand-hint { margin: 8px auto; text-align:center; font-size:14px; color:var(--muted); }
+  .hand-hint b { color:var(--brand); }
+
+  /* 结果 */
+  .result { text-align:center; padding: 20px 12px; }
+  .result .big { font-size:60px; line-height:1; margin:6px 0; }
+  .result .kpi { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:12px 0; }
+  .result .kpi .b { padding:8px 14px; background:var(--card); border:1px solid var(--line); border-radius:10px; }
+  .result .kpi b { color:var(--brand); font-size:20px; }
+
+  button.primary { padding: 12px 20px; font-size:16px; border:none; background:var(--brand); color:#fff; border-radius:10px; cursor:pointer; }
+  button.primary:active { transform: scale(.96); }
+  button.ghost { padding: 12px 20px; font-size:16px; background:transparent; color:inherit; border:1px solid var(--line); border-radius:10px; cursor:pointer; }
+  button.acc { background: var(--acc); color:#fff; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; }
+
+  /* 陨石竞速 */
+  .arena { position:relative; height: 400px; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); border-radius:16px; overflow:hidden; margin:12px 0; }
+  .arena .word { position:absolute; color:#fff; font-size:22px; font-family:"Consolas",monospace; padding:6px 12px; background: rgba(37,99,235,.85); border-radius:8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); }
+  .arena .word.hit { animation: boom .35s ease-out forwards; }
+  .arena .word .typed { color: #fbbf24; }
+  @keyframes boom { 0% { transform: scale(1) } 60% { transform: scale(1.6); opacity:.4 } 100% { transform: scale(2.2); opacity:0 } }
+  .arena .ground { position:absolute; left:0; right:0; bottom:0; height:26px; background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.4)); border-top:1px solid rgba(255,255,255,.15); }
+  .arena .player { position:absolute; bottom:0; left:50%; transform: translateX(-50%); font-size:34px; z-index:2; }
+  .arena .hp { position:absolute; top:10px; left:10px; color:#fff; font-size:14px; }
+  .arena .score { position:absolute; top:10px; right:10px; color:#fbbf24; font-size:16px; font-weight:700; }
+  .arena .banner { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:28px; text-align:center; padding: 20px; }
+  .firework { position:fixed; pointer-events:none; z-index:2000; font-size:32px; animation: rise 1.4s ease-out forwards; }
+  @keyframes rise { 0% { transform: translateY(0) scale(.8); opacity:1 } 100% { transform: translateY(-120px) scale(1.4); opacity:0 } }
+
+  .list-inline { display:flex; gap:8px; flex-wrap:wrap; }
+  .list-inline .chip { background:var(--card); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:14px; }
+
+  footer { text-align:center; color:var(--muted); font-size:12px; padding: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⌨️ 快乐打字 · 二三年级</h1>
+  <p>认键位 · 打词句 · 陨石竞速 · 每天进步一点点</p>
+</header>
+<main id="app"></main>
+<footer>Powered by Cloudflare Workers · type.idai.asia</footer>
+<script src="/data.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
