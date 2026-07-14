@@ -82,6 +82,7 @@ async function ask(q) {
   history.push({ role: 'user', content: q });
   const thinking = add('bot', '思考中…');
   send.disabled = true;
+  try { document.dispatchEvent(new Event('idai:chat-sent')); } catch(e){}
   try {
     const resp = await fetch('/api/chat', {
       method: 'POST',
@@ -109,6 +110,23 @@ document.getElementById('suggest').addEventListener('click', (e) => {
   const q = e.target.getAttribute('data-q');
   if (q) ask(q);
 });
+</script>
+<script src="/checkin-client.js"></script>
+<script>
+(function(){
+  const m = location.hash.match(/uid=([a-zA-Z0-9_-]{6,32})/);
+  if (m) { try { localStorage.setItem('idai.uid', m[1]); location.hash=''; } catch(e){} }
+  window.__APP_ID = 'chat';
+  window.__CHECKIN_ENDPOINT = 'https://type.idai.asia/api/checkin';
+  window.doCheckin = async function() {
+    try {
+      const uid = CheckIn.getUid();
+      return await CheckIn.checkin(window.__CHECKIN_ENDPOINT, uid, window.__APP_ID);
+    } catch(e) {}
+  };
+  // 聊天场景：用户每发送一条消息就算一次学习活动
+  document.addEventListener('idai:chat-sent', () => { window.doCheckin(); });
+})();
 </script>
 </body>
 </html>

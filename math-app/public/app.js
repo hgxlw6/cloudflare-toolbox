@@ -643,6 +643,7 @@ function renderQuiz() {
 }
 
 function renderResult() {
+  try { window.doCheckin && window.doCheckin(); } catch(e){}
   const ch = CHAPTERS.find(c => c.id === state.chId);
   const total = state.right + state.wrong;
   const pct = total ? Math.round(state.right / total * 100) : 0;

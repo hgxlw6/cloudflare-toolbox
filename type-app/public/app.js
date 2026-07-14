@@ -46,6 +46,14 @@ async function doCheckin() {
   try {
     const uid = CheckIn.getUid();
     const data = await CheckIn.checkin(ENDPOINT, uid, APP_ID);
+    if (data && data.streak && typeof MILESTONES !== 'undefined' && MILESTONES.find(x=>x.n===data.streak)) {
+      // 全站首次达标弹一次
+      const key = 'ms.shown.' + data.streak;
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, '1');
+        try { showMilestone(data.streak); } catch(e){}
+      }
+    }
     return data;
   } catch(e) { console.warn('checkin failed', e); return null; }
 }
@@ -565,14 +573,33 @@ render();
 
 
 // ===== 打卡页 =====
+const APP_META = {
+  type:  { emoji:'⌨️', name:'打字',  color:'#2563eb' },
+  math:  { emoji:'📐', name:'数学',  color:'#f59e0b' },
+  yuwen: { emoji:'📚', name:'语文',  color:'#e11d48' },
+  en:    { emoji:'🔤', name:'英语',  color:'#7c3aed' },
+  chat:  { emoji:'💬', name:'AI聊天', color:'#22c55e' }
+};
+const MILESTONES = [
+  { n:1,   icon:'🌱', title:'开启旅程' },
+  { n:3,   icon:'🌿', title:'三天新芽' },
+  { n:7,   icon:'🥉', title:'一周达成' },
+  { n:14,  icon:'🎖️', title:'两周勇士' },
+  { n:30,  icon:'🥈', title:'月度冠军' },
+  { n:60,  icon:'💎', title:'钻石学者' },
+  { n:100, icon:'🥇', title:'百日行者' },
+  { n:180, icon:'🏆', title:'半年之王' },
+  { n:365, icon:'👑', title:'年度传奇' }
+];
+
 async function renderCheckin() {
   app.innerHTML = `
     <a class="back" id="back">← 返回首页</a>
     <div class="panel">
       <h2 style="margin:0 0 4px">📅 每日打卡</h2>
-      <p style="color:var(--muted);margin:0">来一次学习就自动打卡。数据存在服务端，换设备也能同步 👇</p>
+      <p style="color:var(--muted);margin:0">在任意学习站完成关卡即自动打卡。数据存服务端，换设备用同步码可同步。</p>
     </div>
-    <div class="panel" id="loading">正在从云端拉取你的打卡记录…</div>
+    <div class="panel" id="loading">正在从云端拉取…</div>
   `;
   document.getElementById('back').onclick = () => nav('home');
 
@@ -587,29 +614,45 @@ async function renderCheckin() {
   const today = new Date();
   const y = today.getFullYear(), m = today.getMonth();
   const first = new Date(y, m, 1);
-  const startDow = first.getDay(); // 0=Sun
+  const startDow = first.getDay();
   const daysInMonth = new Date(y, m+1, 0).getDate();
   const prevDays = new Date(y, m, 0).getDate();
   const cells = [];
-  // 上月填补
   for (let i = startDow-1; i >= 0; i--) cells.push({ d: prevDays-i, other: true });
   for (let d = 1; d <= daysInMonth; d++) cells.push({ d, y, m });
   while (cells.length % 7) cells.push({ d: cells.length - daysInMonth - startDow + 1, other: true });
 
   const doneMap = data.days || {};
-  const monthPad = (n) => String(n).padStart(2,'0');
-  const todayStr = `${y}-${monthPad(m+1)}-${monthPad(today.getDate())}`;
-  const isDone = (c) => !c.other && !!doneMap[`${c.y}-${monthPad(c.m+1)}-${monthPad(c.d)}`];
+  const pad = (n) => String(n).padStart(2,'0');
+  const todayStr = `${y}-${pad(m+1)}-${pad(today.getDate())}`;
+  const isDone = (c) => !c.other && !!doneMap[`${c.y}-${pad(c.m+1)}-${pad(c.d)}`];
+  const alreadyToday = !!doneMap[todayStr];
+  const todayApps = (doneMap[todayStr] && doneMap[todayStr].apps) || {};
+
+  // 各学科累计次数（整段时间）
+  const appTotals = {};
+  for (const day of Object.values(doneMap)) {
+    for (const [k,v] of Object.entries(day.apps||{})) {
+      appTotals[k] = (appTotals[k]||0) + v;
+    }
+  }
+  const grandTotal = Object.values(appTotals).reduce((a,b)=>a+b,0) || 1;
 
   const dowLabels = ['日','一','二','三','四','五','六'];
   const monthLabel = `${y} 年 ${m+1} 月`;
-  const alreadyToday = !!doneMap[todayStr];
+
+  // 里程碑：已达成 / 下一站
+  const streak = data.streak || 0;
+  const longest = data.longest || 0;
+  const achieved = MILESTONES.filter(x => longest >= x.n);
+  const next = MILESTONES.find(x => x.n > streak);
 
   document.getElementById('loading').outerHTML = `
     <div class="panel">
       <div class="streak-big">
-        <div class="num">${data.streak||0}</div>
-        <div class="lbl">🔥 连续打卡天数（历史最长 ${data.longest||0} 天）</div>
+        <div class="num">${streak}</div>
+        <div class="lbl">🔥 连续打卡天数（历史最长 ${longest} 天）</div>
+        ${next ? `<div style="margin-top:8px;color:var(--muted);font-size:13px">再坚持 <b style="color:var(--brand)">${next.n - streak}</b> 天即可解锁 ${next.icon} <b>${next.title}</b></div>` : '<div style="margin-top:8px">🎊 已解锁全部徽章！</div>'}
       </div>
       <div class="hud" style="justify-content:center">
         <div class="b">总打卡 <b>${data.total||0}</b> 天</div>
@@ -617,7 +660,52 @@ async function renderCheckin() {
         <div class="b">今日 <b>${alreadyToday?'✅ 已打卡':'⏳ 未打卡'}</b></div>
       </div>
       ${!alreadyToday ? '<div style="text-align:center;margin-top:12px"><button class="primary" id="do-checkin">📌 立即打卡</button></div>' : ''}
-      ${alreadyToday ? '<p style="text-align:center;color:var(--muted);font-size:13px;margin:10px 0 0">💡 继续做练习/闯关会自动累加当日次数</p>' : ''}
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">🎯 今日各学科完成次数</h3>
+      ${Object.keys(APP_META).map(k => {
+        const cnt = todayApps[k] || 0;
+        const meta = APP_META[k];
+        const w = Math.min(100, cnt*15);
+        return `<div style="display:flex;align-items:center;gap:10px;margin:8px 0">
+          <div style="width:82px;flex-shrink:0"><span style="font-size:18px">${meta.emoji}</span> <span style="font-size:14px">${meta.name}</span></div>
+          <div style="flex:1;background:var(--bg);height:22px;border-radius:6px;overflow:hidden;position:relative">
+            <div style="height:100%;background:${meta.color};width:${w}%;transition:width .6s ease;border-radius:6px"></div>
+            <span style="position:absolute;left:8px;top:2px;font-size:13px;color:var(--text);font-weight:600">${cnt>0?cnt+' 次':''}</span>
+          </div>
+        </div>`;
+      }).join('')}
+      ${!alreadyToday ? '<p style="color:var(--muted);font-size:13px;text-align:center;margin:8px 0 0">💡 到任意学习站完成一关就会自动出现</p>' : ''}
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">📊 累计学习分布</h3>
+      <div style="display:flex;height:24px;border-radius:6px;overflow:hidden;background:var(--bg)">
+        ${Object.keys(APP_META).map(k => {
+          const cnt = appTotals[k] || 0;
+          const pct = (cnt/grandTotal)*100;
+          if (pct < 0.1) return '';
+          return `<div title="${APP_META[k].name} ${cnt} 次" style="background:${APP_META[k].color};width:${pct}%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">${pct>8?APP_META[k].emoji:''}</div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;font-size:13px">
+        ${Object.keys(APP_META).map(k => `<span><span style="display:inline-block;width:10px;height:10px;background:${APP_META[k].color};border-radius:2px;vertical-align:middle"></span> ${APP_META[k].emoji} ${APP_META[k].name} <b>${appTotals[k]||0}</b></span>`).join('')}
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">🏅 里程碑徽章</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px">
+        ${MILESTONES.map(x => {
+          const got = longest >= x.n;
+          return `<div style="text-align:center;padding:10px 6px;border-radius:12px;background:${got?'linear-gradient(135deg,#fbbf24,#f59e0b)':'var(--bg)'};border:1px solid ${got?'transparent':'var(--line)'};color:${got?'#fff':'var(--muted)'};${got?'':'opacity:.55'}">
+            <div style="font-size:32px;line-height:1">${got?x.icon:'🔒'}</div>
+            <div style="font-size:13px;margin-top:4px;font-weight:${got?'700':'400'}">${x.title}</div>
+            <div style="font-size:11px;opacity:.85">${x.n} 天</div>
+          </div>`;
+        }).join('')}
+      </div>
     </div>
 
     <div class="panel">
@@ -629,11 +717,11 @@ async function renderCheckin() {
         ${dowLabels.map(x=>`<div class="dow">${x}</div>`).join('')}
         ${cells.map(c => {
           const done = isDone(c);
-          const isToday = !c.other && `${c.y}-${monthPad(c.m+1)}-${monthPad(c.d)}` === todayStr;
-          const dateKey = c.other?null:`${c.y}-${monthPad(c.m+1)}-${monthPad(c.d)}`;
+          const isTodayCell = !c.other && `${c.y}-${pad(c.m+1)}-${pad(c.d)}` === todayStr;
+          const dateKey = c.other?null:`${c.y}-${pad(c.m+1)}-${pad(c.d)}`;
           const day = dateKey && doneMap[dateKey];
           const totalToday = day ? Object.values(day.apps||{}).reduce((a,b)=>a+b,0) : 0;
-          return `<div class="day ${c.other?'other':''} ${done?'done':''} ${isToday?'today':''}" title="${dateKey||''}${totalToday?'  完成 '+totalToday+' 次':''}">
+          return `<div class="day ${c.other?'other':''} ${done?'done':''} ${isTodayCell?'today':''}" title="${dateKey||''}${totalToday?'  完成 '+totalToday+' 次':''}">
             ${c.d}${totalToday>0?`<span class="dot">${totalToday>9?'9+':totalToday}</span>`:''}
           </div>`;
         }).join('')}
@@ -642,7 +730,7 @@ async function renderCheckin() {
 
     <div class="panel">
       <h3 style="margin-top:0">🔗 换设备同步</h3>
-      <p style="color:var(--muted);font-size:14px;margin:0 0 8px">这是你的<b>专属同步码</b>，在另一台设备上"输入同步码"即可继续用同一份数据。</p>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 8px">这是你的<b>同步码</b>。5 个学习站共用一份数据，在新设备粘贴或扫码即可同步。</p>
       <div class="uid-box">
         <code id="uid-code">${uid}</code>
         <button class="ghost sm" id="copy-uid">📋 复制</button>
@@ -650,19 +738,22 @@ async function renderCheckin() {
       </div>
       <div class="qr-box" id="qr" style="display:none"></div>
       <div style="margin-top:14px">
-        <label style="font-size:13px;color:var(--muted)">在这台新设备输入你原有的同步码：</label>
+        <label style="font-size:13px;color:var(--muted)">在新设备输入原有同步码：</label>
         <div class="row" style="margin-top:6px">
           <input id="new-uid" type="text" placeholder="粘贴同步码" autocomplete="off" style="padding:10px;border:1px solid var(--line);border-radius:8px;background:transparent;color:inherit;flex:1;min-width:200px" />
           <button class="primary" id="apply-uid">应用</button>
         </div>
       </div>
+      <p style="color:var(--muted);font-size:12px;margin:12px 0 0">🌐 5 个学习站：math.idai.asia · yuwen.idai.asia · en.idai.asia · type.idai.asia · chat.idai.asia</p>
     </div>
   `;
 
   const dc = document.getElementById('do-checkin');
   if (dc) dc.onclick = async () => {
     dc.disabled = true; dc.textContent = '打卡中…';
-    await doCheckin();
+    const newData = await doCheckin();
+    // 触发里程碑弹窗
+    if (newData && newData.streak && MILESTONES.find(x=>x.n===newData.streak)) showMilestone(newData.streak);
     firework();
     renderCheckin();
   };
@@ -674,19 +765,36 @@ async function renderCheckin() {
     const box = document.getElementById('qr');
     if (box.style.display !== 'none' && box.innerHTML) { box.style.display='none'; box.innerHTML=''; return; }
     box.style.display = '';
-    // 简单方案：用 quickchart.io 生成二维码（也可换成本地库）
     const url = `${location.origin}${location.pathname}#uid=${uid}`;
     const src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=200x200`;
-    box.innerHTML = `<img src="${src}" alt="uid QR" width="200" height="200"><div style="color:var(--muted);font-size:12px;margin-top:6px">扫码后打开链接即可自动同步</div>`;
+    box.innerHTML = `<img src="${src}" alt="uid QR" width="200" height="200"><div style="color:var(--muted);font-size:12px;margin-top:6px">扫码后打开链接自动同步</div>`;
   };
   document.getElementById('apply-uid').onclick = () => {
     const v = document.getElementById('new-uid').value.trim();
-    try {
-      CheckIn.setUid(v);
-      alert('已切换到同步码：' + v);
-      renderCheckin();
-    } catch(e) { alert('同步码格式不对，应为 6-32 位字母数字'); }
+    try { CheckIn.setUid(v); alert('已切换到同步码：' + v); renderCheckin(); }
+    catch(e) { alert('同步码格式不对'); }
   };
+}
+
+// 里程碑弹窗（打卡后触发）
+function showMilestone(days) {
+  const info = MILESTONES.find(x => x.n === days) || { icon:'⭐', title:days+' 天达成' };
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  div.innerHTML = `<div style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:32px 40px;border-radius:20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);max-width:340px;animation:pop-ms .5s ease-out">
+    <div style="font-size:80px;line-height:1">${info.icon}</div>
+    <div style="font-size:26px;font-weight:800;margin:10px 0 4px">${info.title}！</div>
+    <div style="font-size:56px;font-weight:900;margin-top:6px">${days}<span style="font-size:20px;font-weight:400;opacity:.9"> 天</span></div>
+    <button style="margin-top:20px;padding:10px 24px;font-size:16px;background:#fff;color:#e11d48;border:none;border-radius:999px;cursor:pointer;font-weight:700" id="ms-close">太棒了！</button>
+  </div>`;
+  if (!document.getElementById('ms-anim')) {
+    const st=document.createElement('style'); st.id='ms-anim';
+    st.textContent='@keyframes pop-ms{0%{transform:scale(0) rotate(-10deg)}70%{transform:scale(1.15)}100%{transform:scale(1)}}';
+    document.head.appendChild(st);
+  }
+  document.body.appendChild(div);
+  div.querySelector('#ms-close').onclick = () => div.remove();
+  firework();
 }
 
 // 支持 URL hash #uid=xxx 一键切换

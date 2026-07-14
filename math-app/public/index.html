@@ -101,5 +101,62 @@
   window.mermaid = mermaid;
 </script>
 <script src="/app.js"></script>
+<script src="/checkin-client.js"></script>
+<script>
+(function(){
+  // 支持通过 URL hash 同步 uid（例如从二维码扫过来）
+  const m = location.hash.match(/uid=([a-zA-Z0-9_-]{6,32})/);
+  if (m) { try { localStorage.setItem('idai.uid', m[1]); location.hash=''; } catch(e){} }
+
+  window.__APP_ID = 'math';
+  window.__CHECKIN_ENDPOINT = 'https://type.idai.asia/api/checkin';
+  window.doCheckin = async function() {
+    try {
+      const uid = CheckIn.getUid();
+      const data = await CheckIn.checkin(window.__CHECKIN_ENDPOINT, uid, window.__APP_ID);
+      // 里程碑徽章
+      if (data && data.streak && [7,14,30,60,100,180,365].includes(data.streak)) {
+        showMilestone(data.streak);
+      }
+      return data;
+    } catch(e) { console.warn('checkin failed', e); }
+  };
+  function showMilestone(days) {
+    const map = {
+      7:   {icon:'🥉', title:'一周达成！', msg:'连续 7 天，坚持是超能力'},
+      14:  {icon:'🎖️', title:'两周勇士',   msg:'连续 14 天，好厉害！'},
+      30:  {icon:'🥈', title:'月度冠军',   msg:'连续 30 天，你太棒啦'},
+      60:  {icon:'💎', title:'钻石学者',   msg:'连续 60 天，你真了不起'},
+      100: {icon:'🥇', title:'百日行者',   msg:'100 天！传奇达成'},
+      180: {icon:'🏆', title:'半年之王',   msg:'半年坚持，无人能敌'},
+      365: {icon:'👑', title:'年度传奇',   msg:'整整一年！你就是榜样'}
+    };
+    const info = map[days] || {icon:'⭐', title:days+' 天达成', msg:'继续加油！'};
+    const div = document.createElement('div');
+    div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn .3s;';
+    div.innerHTML = `<div style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:32px 40px;border-radius:20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);transform:scale(0);animation:pop .5s ease-out forwards;max-width:340px">
+      <div style="font-size:80px;line-height:1">${info.icon}</div>
+      <div style="font-size:28px;font-weight:800;margin:10px 0 4px">${info.title}</div>
+      <div style="font-size:16px;opacity:.95;margin-bottom:18px">${info.msg}</div>
+      <div style="font-size:56px;font-weight:900">${days} <span style="font-size:20px;font-weight:400;opacity:.85">天</span></div>
+      <button style="margin-top:20px;padding:10px 24px;font-size:16px;background:#fff;color:#e11d48;border:none;border-radius:999px;cursor:pointer;font-weight:700" onclick="this.closest('div[style*=fixed]').remove()">太棒了！</button>
+    </div>`;
+    if (!document.getElementById('milestone-anim')) {
+      const st = document.createElement('style'); st.id='milestone-anim';
+      st.textContent = '@keyframes pop{0%{transform:scale(0) rotate(-10deg)}70%{transform:scale(1.15) rotate(3deg)}100%{transform:scale(1) rotate(0)}} @keyframes fadeIn{from{opacity:0}to{opacity:1}}';
+      document.head.appendChild(st);
+    }
+    document.body.appendChild(div);
+    // 撒花
+    const es=['🎉','🎊','⭐','🌟','✨','🏆','🎈'];
+    for(let i=0;i<20;i++) setTimeout(()=>{
+      const e=document.createElement('div');
+      e.textContent=es[Math.floor(Math.random()*es.length)];
+      e.style.cssText='position:fixed;pointer-events:none;z-index:99998;font-size:36px;left:'+(Math.random()*window.innerWidth)+'px;top:'+(window.innerHeight*.5+Math.random()*100)+'px;animation:rise 1.4s ease-out forwards;';
+      document.body.appendChild(e); setTimeout(()=>e.remove(),1500);
+    },i*60);
+  }
+})();
+</script>
 </body>
 </html>

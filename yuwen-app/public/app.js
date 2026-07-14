@@ -723,6 +723,7 @@ function renderQuiz() {
 }
 
 function renderResult() {
+  try { window.doCheckin && window.doCheckin(); } catch(e){}
   const u = UNITS.find(x => x.id === state.uid);
   const total = state.right + state.wrong;
   const pct = total ? Math.round(state.right/total*100) : 0;
