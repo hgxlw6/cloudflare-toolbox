@@ -23,6 +23,7 @@ const sfx = {
   ok:   () => beep(880, 50, 'sine'),
   bad:  () => beep(180, 100, 'square', 0.05),
   boom: () => { beep(300,60,'triangle',0.09); setTimeout(()=>beep(150,80,'sawtooth',0.08), 40); },
+  shoot: () => beep(1400, 30, 'square', 0.04),
   win:  () => { [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,120,'triangle',0.08),i*90)); }
 };
 
@@ -408,6 +409,61 @@ function renderSentRun() {
 
 // ===== 陨石竞速 =====
 let meteorGame = null;
+
+// 子弹发射：从飞船位置飞向陨石，途中命中后爆炸火花
+function fireBullet(arena, target, isKill, onArrive) {
+  const player = arena.querySelector('.player');
+  if (player) {
+    player.classList.add('shoot');
+    setTimeout(()=>player.classList.remove('shoot'), 90);
+    // 枪口闪光
+    const muzzle = document.createElement('div');
+    muzzle.className = 'muzzle';
+    arena.appendChild(muzzle);
+    setTimeout(()=>muzzle.remove(), 150);
+  }
+  const aRect = arena.getBoundingClientRect();
+  const tRect = target.getBoundingClientRect();
+  const startX = aRect.width/2;
+  const startY = aRect.height - 24;
+  const endX = tRect.left - aRect.left + tRect.width/2;
+  const endY = tRect.top - aRect.top + tRect.height/2;
+  const dx = endX - startX, dy = endY - startY;
+  const dist = Math.hypot(dx, dy);
+  const dur = Math.max(140, Math.min(320, dist * 0.7));
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+  const b = document.createElement('div');
+  b.className = 'bullet';
+  b.style.left = startX + 'px';
+  b.style.top = startY + 'px';
+  b.style.transition = `left ${dur}ms linear, top ${dur}ms linear`;
+  b.style.transform = `translate(-50%,-50%) rotate(${angle}deg)`;
+  arena.appendChild(b);
+  requestAnimationFrame(() => {
+    b.style.left = endX + 'px';
+    b.style.top  = endY + 'px';
+  });
+  setTimeout(() => {
+    // 命中爆点火花
+    const sparkList = isKill ? ['💥','💥','✨','⭐','🔥','💫','⭐'] : ['✨','⭐','💫'];
+    const spawnN = isKill ? 8 : 3;
+    for (let i=0;i<spawnN;i++) {
+      const sp = document.createElement('span');
+      sp.className = 'spark';
+      sp.textContent = sparkList[Math.floor(Math.random()*sparkList.length)];
+      const jitterX = (Math.random()-0.5) * (isKill ? 60 : 24);
+      const jitterY = (Math.random()-0.5) * (isKill ? 60 : 24);
+      sp.style.left = (endX + jitterX) + 'px';
+      sp.style.top  = (endY + jitterY) + 'px';
+      sp.style.fontSize = (14 + Math.random()*14) + 'px';
+      arena.appendChild(sp);
+      setTimeout(()=>sp.remove(), 400);
+    }
+    b.remove();
+    if (onArrive) onArrive();
+  }, dur);
+}
+
 function renderMeteor() {
   if (meteorGame) { clearInterval(meteorGame.tick); meteorGame = null; }
   app.innerHTML = `
@@ -507,15 +563,17 @@ function renderMeteor() {
       target.dataset.pos = newPos;
       target.querySelector('.typed').textContent = target.dataset.text.slice(0, newPos);
       target.innerHTML = `<span class="typed">${target.dataset.text.slice(0,newPos)}</span>${target.dataset.text.slice(newPos)}`;
-      sfx.ok();
-      if (newPos >= target.dataset.text.length) {
-        // 消灭
-        target.classList.add('hit');
-        sfx.boom();
-        g.score += 10 + target.dataset.text.length * 2;
-        scoreEl.textContent = '得分 ' + g.score;
-        setTimeout(()=>target.remove(), 400);
-      }
+      const isKill = newPos >= target.dataset.text.length;
+      fireBullet(arena, target, isKill, () => {
+        if (isKill) {
+          target.classList.add('hit');
+          sfx.boom();
+          g.score += 10 + target.dataset.text.length * 2;
+          scoreEl.textContent = '得分 ' + g.score;
+          setTimeout(()=>target.remove(), 400);
+        }
+      });
+      sfx.shoot();
     };
 
     const endGame = () => {
