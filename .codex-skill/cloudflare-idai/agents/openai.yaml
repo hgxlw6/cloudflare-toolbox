@@ -1,0 +1,3 @@
+interface:
+  display_name: "Cloudflare idai.asia"
+  short_description: "Deploy & operate idai.asia on Cloudflare free tier"
