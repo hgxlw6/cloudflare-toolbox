@@ -75,3 +75,14 @@ Sign a long-lived Origin CA certificate.
 python scripts/origin_cert.py --hostname "*.idai.asia" "idai.asia" --days 5475
 ```
 Writes `.pem` + `.key` under `certs/<zone>/` (which is gitignored). Use in Nginx / origin server.
+## workers.py
+Manage / clean up Worker Scripts in the account.
+
+```powershell
+python scripts/workers.py list
+python scripts/workers.py delete --name legacy-worker --dry-run
+python scripts/workers.py delete --name a --name b --yes
+```
+
+`--yes` skips interactive confirmation. `--dry-run` prints target list without deleting.
+Use this to remove stale/experimental workers (previous examples: `cloudflare-docker-proxy`, `cors-worker`, `floral-sun-6ea7`).

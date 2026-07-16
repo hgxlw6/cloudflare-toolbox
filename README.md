@@ -124,7 +124,24 @@ python scripts/dns_records.py delete --zone idai.asia --name docs --type CNAME
 python scripts/origin_cert.py --hostname "*.idai.asia" "idai.asia" --days 5475   # 15 年 Origin CA
 ```
 
-### KV 管理（打卡数据）
+
+
+### 管理 / 清理 Worker Scripts
+
+```powershell
+# 列出账号下所有 Worker
+python scripts/workers.py list
+
+# 干跑（只打印不执行）
+python scripts/workers.py delete --name obsolete-worker --dry-run
+
+# 批量删除（多个 --name）
+python scripts/workers.py delete --name cors-worker --name floral-sun-6ea7 --yes
+```
+
+不加 `--yes` 会交互式让你输 `yes` 确认。加 `--dry-run` 只打印不执行，先看要删啥。
+
+
 
 ```powershell
 python scripts/kv.py list                                   # 列所有 namespace
