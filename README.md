@@ -16,6 +16,7 @@
 | [en.idai.asia](https://en.idai.asia) | 小学三年级英语上下册 | 音标 · TTS · 对话/儿歌/拼写/故事 |
 | [type.idai.asia](https://type.idai.asia) | 二三年级打字学习 | 5 指颜色键盘 · 词语拼音 · 陨石竞速 · **每日打卡中心** |
 | [chat.idai.asia](https://chat.idai.asia) | AI 聊天助手 | Workers AI · Llama-3.3-70B |
+| [istio.idai.asia](https://istio.idai.asia) | Istio 14 天速成 | 14 天路线图 · 实战清单 · 速查表 · 自测题 |
 
 **跨站数据打通**：每站完成一关会自动 checkin 到 `type.idai.asia` 的 KV，5 站共享一个 UID 的连续打卡天数、里程碑徽章、月历。
 
@@ -45,7 +46,7 @@ cloudflare-test/
 │  ├─ deploy_worker.py         #   ⭐ 部署 Worker（含静态资源 + AI + KV + 自定义域名）
 │  ├─ kv.py                    #   ⭐ KV Namespace 管理
 │  └─ *.md                     #   各脚本使用说明
-├─ math-app/    | yuwen-app/ | en-app/ | type-app/ | worker/
+├─ math-app/    | yuwen-app/ | en-app/ | type-app/ | istio-app/ | worker/
 │  ├─ src/worker.js            # Worker 入口
 │  └─ public/                  # 静态资源
 └─ .github/workflows/ci.yml    # CI 检查敏感文件 & 格式
@@ -98,6 +99,7 @@ python scripts/deploy_worker.py --name math-idai  --script math-app/src/worker.j
 python scripts/deploy_worker.py --name yuwen-idai --script yuwen-app/src/worker.js --assets yuwen-app/public --domain yuwen.idai.asia
 python scripts/deploy_worker.py --name en-idai    --script en-app/src/worker.js    --assets en-app/public    --domain en.idai.asia
 python scripts/deploy_worker.py --name idai-chat  --script worker/src/worker.js    --assets worker/public    --domain chat.idai.asia
+python scripts/deploy_worker.py --name istio-idai --script istio-app/src/worker.js --assets istio-app/public --domain istio.idai.asia
 ```
 
 只想重绑域名不重上传代码：加 `--only-domain`。
@@ -112,6 +114,7 @@ python scripts/deploy_worker.py --name math-idai  --script math-app/src/worker.j
 python scripts/deploy_worker.py --name yuwen-idai --script yuwen-app/src/worker.js --assets yuwen-app/public --domain yuwen.idai.asia
 python scripts/deploy_worker.py --name en-idai    --script en-app/src/worker.js    --assets en-app/public    --domain en.idai.asia
 python scripts/deploy_worker.py --name idai-chat  --script worker/src/worker.js    --assets worker/public    --domain chat.idai.asia
+python scripts/deploy_worker.py --name istio-idai --script istio-app/src/worker.js --assets istio-app/public --domain istio.idai.asia
 ```
 
 ### 域名 / DNS / 证书

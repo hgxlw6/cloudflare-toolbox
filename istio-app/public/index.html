@@ -1,0 +1,60 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Istio 14天速成 · idai.asia</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">🕸️ Istio 14 天速成</div>
+  <nav>
+    <a href="#/">首页</a>
+    <a href="#/roadmap">学习路径</a>
+    <a href="#/labs">实战清单</a>
+    <a href="#/cheatsheet">速查表</a>
+    <a href="#/checklist">上线Checklist</a>
+    <a href="#/incidents">事故案例</a>
+    <a href="#/quiz">自测</a>
+  </nav>
+  <div class="checkin-box">
+    <span id="uid-tag">uid: -</span>
+    <button id="btn-checkin">今日打卡</button>
+    <span id="streak-tag">🔥 0</span>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<footer>
+  <span>© idai.asia · 服务网格学习站</span>
+  <span>基于 Istio 1.24 官方文档整理，请以 istio.io 最新版本为准</span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'dark',
+    themeVariables: {
+      background: '#0d1730',
+      primaryColor: '#1e3a8a',
+      primaryTextColor: '#e6ecff',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#7dd3fc',
+      secondaryColor: '#7c3aed',
+      tertiaryColor: '#152142',
+      fontFamily: 'Segoe UI, PingFang SC, sans-serif'
+    },
+    flowchart: { htmlLabels: true, curve: 'basis' },
+    securityLevel: 'loose'
+  });
+</script>
+<script src="/checkin-client.js"></script>
+<script src="/data.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
+
+
